@@ -15641,8 +15641,8 @@ window.__structSig = function (list, withTime) {
   function paintButton() {
     if (button) button.textContent = config.enabled ? '通知の設定（オン）' : '通知の設定（オフ）';
   }
-  function showSystemNotification(title, body, tag) {
-    if (window.__pushActive) return;   // Web Pushが予約済みなら二重通知しない
+  function showSystemNotification(title, body, tag, force) {
+    if (window.__pushActive && !force) return;   // Web Pushが予約済みなら二重通知しない
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     const options = { body, tag, renotify: false, icon: './icon-192.png', badge: './icon-192.png' };
     try {
@@ -15672,13 +15672,10 @@ window.__structSig = function (list, withTime) {
     const today = `${dateKey()}:${appState.activeDay}`;
     if (config.completionKey === today) return;
     config.completionKey = today; write();
-    try {
-      new Notification('お疲れ様でした。', {
-        body: '記録をして結果を見ましょう。',
-        tag: `study-complete-${today}`,
-        renotify: false
-      });
-    } catch (_) {}
+    // 予約済みの「終了」通知と同じtagにして、先に出た分は置き換わる（二重表示を防ぐ）。iPhoneでも出るようServiceWorker経由。
+    const d = new Date(); if (d.getHours() < 6) d.setDate(d.getDate() - 1);
+    const logical = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    showSystemNotification('お疲れ様でした。', '記録をして結果を見ましょう。', `study-end-${appState.activeDay}-${logical}`, true);
   };
   function check() {
     clearTimeout(timer);
@@ -15697,7 +15694,7 @@ window.__structSig = function (list, withTime) {
         seenKey = currentKey;
         armedKey = nextKey;
       } else if (current && currentKey !== seenKey) {
-        if (armedKey === currentKey || seenKey) send(current, currentKey);
+        if ((armedKey === currentKey || seenKey) && now - current.startMins <= 1) send(current, currentKey);   // 開始直後だけ（遅れて再開した時は出さない）
         seenKey = currentKey;
         armedKey = '';
       }
@@ -15709,7 +15706,8 @@ window.__structSig = function (list, withTime) {
         if (prefs.next !== false) leads.forEach(lead => {
           const fireAt = next.startMins - lead;
           const leadKey = `next:${nextKey}:${lead}`;
-          if (now >= fireAt && now < next.startMins && !sentLocal.has(leadKey)) {
+          // その時刻ちょうどの1分間だけ送る（遅れて開いた時に過ぎた分をまとめて出さない）。直前の項目の開始と同時刻になる分は出さない。
+          if (now === fireAt && !(current && fireAt <= current.startMins) && !sentLocal.has(leadKey)) {
             sentLocal.add(leadKey);
             showSystemNotification(`次は『${next.item.title}』です。`, `${lead}分後に始まります。`, `study-next-${nextKey}-${lead}`);
           }
@@ -15722,14 +15720,15 @@ window.__structSig = function (list, withTime) {
         for (let n = 0; n < it.sets; n++) {
           const breakAt = e.startMins + 30 * n + 25;
           const breakKey = `pomo-break:${itemKey(day, date, it)}:${n}`;
-          if (now >= breakAt && now < breakAt + 5 && !sentLocal.has(breakKey)) {
+          if (e.startMins + 30 * n >= e.endMins || breakAt > e.endMins) break;
+          if (now === breakAt && !sentLocal.has(breakKey)) {
             sentLocal.add(breakKey);
             showSystemNotification('お疲れ様です。', '25分間の勉強が終わりました。休憩を取りましょう。', `study-break-${breakKey}`);
           }
         }
       });
       // 起床通知（起床時刻を入力済みなら送らない）
-      if (prefs.wake !== false && now >= wakeMinsFor(day) && now < wakeMinsFor(day) + 10) {
+      if (prefs.wake !== false && now === wakeMinsFor(day)) {
         let entered = false;
         try { const r = JSON.parse(localStorage.getItem('study_tracker_dayrun_v1') || 'null'); entered = !!(r && r.date === date && Number.isFinite(r.wakeActual)); } catch (_) {}
         const wakeKey = `wake:${day}:${date}`;
@@ -15737,7 +15736,7 @@ window.__structSig = function (list, withTime) {
       }
       // 1日の最後の予定終了通知
       const last = entries[entries.length - 1];
-      if (prefs.end !== false && last && now >= last.endMins) {
+      if (prefs.end !== false && last && now === last.endMins) {
         const endKey = `end:${day}:${date}`;
         if (!sentLocal.has(endKey)) { sentLocal.add(endKey); showSystemNotification('お疲れ様でした。', '記録をして結果を見ましょう。', `study-end-${endKey}`); }
       }
@@ -15834,6 +15833,7 @@ window.__structSig = function (list, withTime) {
     if (!leads.length) leads.push(3);
     const out = [];
     const add = (key, t, tag, title, body) => { if (t > now + 15000) out.push({ id: key + '@' + t, t, tag, title, body }); };
+    const nextInfo = new Map();   // 事前通知のid → {title, lead}（同時刻の通知があるとき1件にまとめるため）
     // 1) 起床：1日1回だけ。今日の「起きた時間」をまだ入力していないときだけ、予定の起床時刻に知らせる
     if (P.wake && !wakeEntered()) add(`wake:${day}:${dk}`, at(wakeMinsFor(day)), `study-wake-${day}-${dk}`, 'おはようございます', '起きた時間を入力して勉強をしましょう');
     entries.forEach((e, i) => {
@@ -15856,8 +15856,12 @@ window.__structSig = function (list, withTime) {
       }
       // 4) 事前通知：選んだ各タイミングで、次に始まる項目名を知らせる
       if (P.next && nx) leads.forEach(lead => {
-        // 直前の項目の長さに関係なく、次の開始時刻から指定分を引いた時刻に予約する。
-        add(`next:${k}:${lead}:${nx.item.id}`, at(nx.startMins - lead), `study-next-${k}-${lead}-${nx.item.id}`, `次は『${nx.item.title}』です。`, `${lead}分後に始まります。`);
+        // 「いま実行中の項目の、次の1項目」だけを予告する：指定分前が今の項目の開始より後ろの時だけ予約
+        // （それより前だと、今の項目の前の項目の時点で先走って出てしまう／今の項目の開始通知と同時刻になる）
+        if (nx.startMins - lead <= e.startMins) return;
+        const id = `next:${k}:${lead}:${nx.item.id}`;
+        add(id, at(nx.startMins - lead), `study-next-${k}-${lead}-${nx.item.id}`, `次は『${nx.item.title}』です。`, `${lead}分後に始まります。`);
+        nextInfo.set(id + '@' + at(nx.startMins - lead), { title: nx.item.title, lead });
       });
     });
     // 5) 1日の最後だけ「お疲れ様でした」
@@ -15868,7 +15872,17 @@ window.__structSig = function (list, withTime) {
     if (P.late && late) out.push({ id: `late:${dk}:${Math.floor(now / 3600000)}`, t: now + 120000, tag: `study-late-${dk}`, title: '遅れがあります', body: '時間割を修正しましょう' });
     const ta = window.__pushTestAt;   // 設定画面の「テスト通知」
     if (ta && ta > now + 15000) out.push({ id: 'test:' + ta, t: ta, tag: 'study-test', title: 'テスト通知', body: 'アプリを閉じていても通知が届いています' });
-    return out.sort((x, y) => x.t - y.t).slice(0, 78);
+    // 同じ分に別の通知（休憩・開始など）があるときは、事前通知を別に出さず、その通知に1行足して1件にまとめる
+    const minuteOf = (t) => Math.floor(t / 60000);
+    const others = new Map();
+    out.forEach(ev => { if (!nextInfo.has(ev.id)) { const m = minuteOf(ev.t); if (!others.has(m)) others.set(m, ev); } });
+    const merged = out.filter(ev => {
+      const info = nextInfo.get(ev.id); if (!info) return true;
+      const host = others.get(minuteOf(ev.t)); if (!host) return true;
+      host.body += ` 次は『${info.title}』が${info.lead}分後に始まります。`;
+      return false;
+    });
+    return merged.sort((x, y) => x.t - y.t).slice(0, 78);
   }
 
   async function getSub(create) {
