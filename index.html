@@ -1,6 +1,10 @@
 <!doctype html>
 <html lang="ja">
 <head>
+<style id="legacy-shortcut-first-paint">
+  /* 旧版の右下ショートカットは新しいFABの初期化前から常時非表示 */
+  #floating-proposal-btn, #floating-jump-btn { display: none !important; visibility: hidden !important; }
+</style>
 <script>try{var __d=localStorage.getItem('study_tracker_design_v1');document.documentElement.setAttribute('data-design',__d==='carbon'?'carbon':'apple')}catch(e){document.documentElement.setAttribute('data-design','apple')}</script>
 <script>try{localStorage.removeItem('study_tracker_harmony_v1');var __p=localStorage.getItem('study_tracker_palette_v1');if(__p==='harmony'){localStorage.removeItem('study_tracker_palette_v1');__p=null}if(__p&&__p!=='standard')document.documentElement.setAttribute('data-palette',__p)}catch(e){}</script>
 <script>try{var __t=localStorage.getItem('study_tracker_theme_v16');if(__t==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
@@ -7019,9 +7023,8 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
 
     function bedtimeFinishInfo() {
       const nowMins = getNowMinutes();
-      const lastStudy = recalcTimeline().entries.slice().reverse().find(e => e.item && e.item.kind === 'study');
-      const afterLastStudy = !appState.editMode && !!lastStudy && lastStudy.endMins <= nowMins;
-      return { minutes: afterLastStudy ? nowMins : curfewMins(), afterLastStudy };
+      const allRecorded = !appState.editMode && computeDayStudyMetrics(appState.activeDay).isAllCompleted;
+      return { minutes: allRecorded ? nowMins : curfewMins(), afterLastStudy: allRecorded };
     }
 
     function renderBedtimeChecklist() {
@@ -7037,9 +7040,10 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
       const headingLabel = document.querySelector('[data-bedtime-finish]');
       if (headingLabel) headingLabel.textContent = finishLabel + (appState.editMode ? ' ✎' : '');
       let checkedCount = 0;
-      const locked = getNowMinutes() < curfewMins();
+      const allRecorded = !appState.editMode && computeDayStudyMetrics(appState.activeDay).isAllCompleted;
+      const locked = !allRecorded;
       const lockNote = locked
-        ? `<div class="flex items-center gap-1.5 px-1 pb-0.5 text-[11px] font-extrabold text-m3sub dark:text-darkSub">${SVG_ICONS.clockSmall}<span>22:55 から使えます（まだ未来の枠です）</span></div>`.replace(/22:55/g, fmtEnd())
+        ? `<div class="flex items-center gap-1.5 px-1 pb-0.5 text-[11px] font-extrabold text-m3sub dark:text-darkSub">${SVG_ICONS.clockSmall}<span>最後の勉強項目まで、すべての記録を入力すると使えます</span></div>`
         : '';
       container.innerHTML = lockNote + BEDTIME_ITEMS.map(b0 => {
         const b = b0.end ? Object.assign({}, b0, { text: b0.text.replace('23:00', finishLabel) }) : b0;
@@ -8131,9 +8135,9 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
     }
 
     function toggleBedtime(key) {
-      const nowM = getNowMinutes();
-      if (nowM < curfewMins()) {
-        showLockPopup('まだ切り上げられません', `22:55 から押せます（今は ${formatTime(nowM)}）`.replace(/22:55/g, fmtEnd()));
+      const allRecorded = !appState.editMode && computeDayStudyMetrics(appState.activeDay).isAllCompleted;
+      if (!allRecorded) {
+        showLockPopup('まだ切り上げられません', '最後の勉強項目まで、すべての記録を入力してください');
         return;
       }
       appState.bedtime[key] = !appState.bedtime[key];
@@ -8193,7 +8197,13 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
       if (allDayKeys().indexOf(dayKey) === -1) return;
       if (dayKey === appState.activeDay && !force) return;
       try { closeResultModal(); } catch (_) {}   // リザルトは、選んでいる曜日のぶんだけ。曜日を変えたら閉じる
+      const switchingFrom = appState.activeDay;
       appState.activeDay = dayKey;
+      // 未使用曜日へ移動したら、その曜日での進行中表示・追跡状態を解除する
+      if (typeof isUnusedDayTab === 'function' && isUnusedDayTab(appState.schedules[dayKey], dayKey)) {
+        appState.trackingBadge = null;
+        appState.jumpHighlight = null;
+      }
       appState.trackingBadge = null;
       appState.jumpHighlight = null;
       appState.openDrawerItemId = null;
@@ -12650,7 +12660,7 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
       const e = document.getElementById('wake-badge-text');
       if (e) {
         e.parentElement.style.display = isUnusedActiveTab() ? 'none' : '';   // 未使用の曜日：起床時間は出さない
-        e.textContent = formatTime(wakeMinsFor(key)) + ' 起床スタート' + (ed ? ' ✎' : '');
+        e.textContent = formatTime(baseWake(key)) + ' 起床スタート' + (ed ? ' ✎' : '');
         const pr = e.parentElement; pr.style.cursor = ed ? 'pointer' : ''; pr.style.outline = ed ? '2px dashed #f59e0b' : '';
       }
       document.querySelectorAll('[data-end-label]').forEach(x => {
@@ -13819,19 +13829,13 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
   }
   loadRun();
 
-  // 時間割の開始時刻：勉強開始を設定した日は、その時刻から並べる
-  window.wakeMinsFor = function (k) {
-    let v = (run && run.date === getTodayDateKey() && run.key === k && Number.isFinite(run.startMins)) ? run.startMins : baseWake(k);
-    // 起きた時間より前には始められない（◯×の記録がある日は、記録を動かさないのでそのまま）
-    try { if (run && run.date === getTodayDateKey() && run.key === k && k === appState.activeDay && Number.isFinite(run.wakeActual) && v < run.wakeActual && !hasRecords()) v = c5(run.wakeActual); } catch (_) {}
-    // 起きた時間を入れていない日も、予定の起床時刻より前には始められない
-    try { if (run && run.date === getTodayDateKey() && run.key === k && k === appState.activeDay && Number.isFinite(run.startMins) && !Number.isFinite(run.wakeActual) && v < baseWake(k) && !hasRecords()) v = baseWake(k); } catch (_) {}
-    return v;
-  };
-  window.__wakeFloor = function () { try { if (run && run.date === getTodayDateKey() && run.key === appState.activeDay && Number.isFinite(run.wakeActual)) return c5(run.wakeActual); } catch (_) {} return 0; };
+  // 起床時刻と勉強開始時刻は独立して保持する。時間割の基準は起床予定時刻。
+  window.wakeMinsFor = function (k) { return (run && run.date === getTodayDateKey() && run.key === k && Number.isFinite(run.startMins)) ? run.startMins : 360; };
+  window.__wakeFloor = function () { try { if (run && run.date === getTodayDateKey() && run.key === appState.activeDay && Number.isFinite(run.wakeActual)) return r5(run.wakeActual); } catch (_) {} return 0; };
   const plannedWake = () => baseWake(appState.activeDay);
-  // 勉強開始の下限：起きた時間（入力済み）、なければ予定の起床時刻
-  window.__startFloor = function () { try { const r0 = ensureRun(); if (r0.key === appState.activeDay && Number.isFinite(r0.wakeActual)) return c5(r0.wakeActual); } catch (_) {} return c5(plannedWake()); };
+  // 勉強開始の下限：起床予定時刻と実際の起床時刻の遅い方。勉強開始は起床より前にしない。
+  window.__startFloor = function () { let w = plannedWake(); try { const r0 = ensureRun(); if (r0.key === appState.activeDay && Number.isFinite(r0.wakeActual)) w = Math.max(w, r0.wakeActual); } catch (_) {} return Math.max(0, Math.min(1435, Math.ceil(w / 5) * 5)); };
+  window.__startCeiling = window.__startFloor; // 旧名との互換用（意味は下限に変更）
   const isRunDay = () => ensureRun().key === appState.activeDay;
   const hasRecords = () => (appState.schedules[appState.activeDay] || []).some(it => it.kind === 'study' && ((it.done || 0) > 0 || (it.missed || 0) > 0 || it.completed));
   const colors = () => ({ card: 'var(--card)', ink: 'var(--ink)', sub: 'var(--sub)', line: 'var(--line)', soft: 'var(--muted)' });
@@ -14109,8 +14113,9 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
     } catch (e) { console.warn('auto fix skipped', e); }
   }
   async function applyStart(mins, msg) {
+    // 勉強開始時刻の明示的な編集は未使用曜日でも許可する（起床操作からの自動開始はクリック側で制限）。
     const r = ensureRun();
-    try { const fl = window.__startFloor(); if (mins < fl) mins = fl; } catch (_) {}   // 起床より前には始めない
+    try { const floor = window.__startFloor(); if (mins < floor) mins = floor; } catch (_) {}   // 勉強開始は起床時刻より前にしない
     r.key = appState.activeDay; r.startMins = mins; saveRun();
     saveState(); renderAll();
     showToast(msg, 'indigo');
@@ -14134,7 +14139,7 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
     const sameDay = r.key === appState.activeDay;
     const wakeActual = sameDay ? r.wakeActual : null;
     const startSet = sameDay && Number.isFinite(r.startMins);
-    const start = startSet ? r.startMins : pw;
+    const start = startSet ? r.startMins : 360; // 勉強開始の初期値は6:00。起床予定時刻とは独立
     const near = Math.abs(now - pw) <= 5;
     const btn = (act, label, bg, fg) => `<button type="button" data-act="${act}" style="padding:9px 14px;border-radius:999px;border:0;background:${bg};color:${fg};font-weight:900;font-size:13px;touch-action:manipulation">${label}</button>`;
     const box = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:var(--r-sm,8px);border:1px solid ' + c.line + ';background:' + c.card + ';color:' + c.ink;
@@ -14169,7 +14174,7 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
       const e = document.getElementById('wake-badge-text');
       if (e) {
         e.parentElement.style.display = isUnusedActiveTab() ? 'none' : '';
-        e.textContent = formatTime(wakeMinsFor(key)) + ' 起床スタート' + (ed ? ' ✎' : '');
+        e.textContent = formatTime(baseWake(key)) + ' 起床スタート' + (ed ? ' ✎' : '');
         if (!ed && run && run.key === key && Number.isFinite(run.startMins)) e.textContent = formatTime(run.startMins) + ' 勉強スタート';
         e.parentElement.style.cursor = ed ? 'pointer' : '';
         e.parentElement.style.outline = ed ? '2px dashed #f59e0b' : '';
@@ -14186,6 +14191,11 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
   async function onClick(e) {
     const b = e.target.closest('[data-act]'); if (!b) return;
     const act = b.dataset.act, r = ensureRun(), now = getNowMinutes(), pw = plannedWake();
+    // 未使用の曜日では起床記録・「今すぐ開始」は禁止。ただし開始時刻の編集は許可する
+    if (isUnusedActiveTab() && ['wake-ok', 'wake-input', 'wake-edit', 'start-now'].includes(act)) {
+      showToast('この曜日は未使用のため、勉強を開始できません', 'dark');
+      return;
+    }
     if (act === 'wake-plan') {   // 起床予定の時刻を設定する
       const key = appState.activeDay;
       const v = await drumPicker('起床予定の時間', pw, 0, 1435);
@@ -14193,7 +14203,11 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
       if (isCustomDay(key)) { appState.customDays = appState.customDays || {}; appState.customDays[key] = appState.customDays[key] || {}; appState.customDays[key].wake = v; }
       else { appState.dayWake = appState.dayWake || {}; appState.dayWake[key] = v; }
       let note = '';
-      if (r.key === key && Number.isFinite(r.startMins) && r.startMins < v) { r.startMins = c5(v); saveRun(); note = `（勉強開始も ${formatTime(r.startMins)} にしました）`; }
+      if (r.key === key) {
+        const floor = Math.ceil(v / 5) * 5;
+        const currentStart = Number.isFinite(r.startMins) ? r.startMins : 360;
+        if (currentStart < floor) { r.startMins = floor; saveRun(); note = `（勉強開始も ${formatTime(floor)} に調整）`; }
+      }
       window.__overAsked = null; saveState(); renderAll();
       showToast(`起床予定を ${formatTime(v)} にしました${note}`, 'indigo');
     } else if (act === 'wake-ok') {
@@ -14202,19 +14216,19 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
     } else if (act === 'wake-input' || act === 'wake-edit') {
       const v = await drumPicker('起きた時間', Math.max(0, Math.min(1380, r5(r.wakeActual != null ? r.wakeActual : Math.min(now, 1435)))), 0, 1435);
       if (v == null) return;
-      r.key = appState.activeDay; r.wakeActual = v; saveRun();
-      if (Number.isFinite(r.startMins) && r.startMins < c5(v) && !hasRecords()) { r.startMins = c5(v); saveRun(); }   // 起きた時間より前の開始は後ろへ
-      renderPanel();
-      // 勉強開始をまだ決めていない日は、遅く起きたら開始も自動で後ろへ
-      if (!Number.isFinite(r.startMins) && v > pw && !hasRecords()) { await applyStart(c5(v), `${formatTime(v)} 起床 → ${formatTime(c5(v))} から勉強を始めます`); }
-      else showToast(`${formatTime(v)} に起床しました`, 'emerald');
+      r.key = appState.activeDay; r.wakeActual = v;
+      // 起床時刻を遅くした結果、勉強開始が起床より前になる場合だけ、勉強開始を起床時刻まで進める。
+      const floor = Math.ceil(v / 5) * 5;
+      const currentStart = Number.isFinite(r.startMins) ? r.startMins : 360;
+      if (currentStart < floor) r.startMins = floor;
+      saveRun(); renderPanel();
+      showToast(`${formatTime(v)} に起床しました${Number.isFinite(r.startMins) && r.startMins === floor && currentStart < floor ? `（勉強開始も ${formatTime(floor)} に調整）` : ''}`, 'emerald');
       enforceRules();
     } else if (act === 'start-input') {
       if (hasRecords() && !window.confirm('すでに◯×の記録があります。開始時刻を変えると、これからの予定の時刻がずれます。変えますか？')) return;
-      const cur = Number.isFinite(r.startMins) && r.key === appState.activeDay ? r.startMins : pw;
-      const fl = Math.min(1435, window.__startFloor());
-      const v = await drumPicker('勉強を始める時間', Math.max(cur, fl), fl, 1435);   // 起床時間より前は選べない
-      if (v != null && v < fl) return showToast(`勉強開始は起床時間（${formatTime(fl)}）より前にはできません`, 'dark');
+      const cur = Number.isFinite(r.startMins) && r.key === appState.activeDay ? r.startMins : 360;
+      const floor = Math.min(1435, window.__startFloor());
+      const v = await drumPicker('勉強を始める時間', Math.max(cur, floor), floor, 1435);   // 起床時刻より前は選べない
       if (v == null || v === cur) return;
       await applyStart(v, `${formatTime(v)} から勉強を始めます（時間割を整えます）`);
     } else if (act === 'end-input') {
@@ -14234,7 +14248,7 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
       }
     } else if (act === 'start-now') {
       if (hasRecords() && !window.confirm('すでに◯×の記録があります。開始時刻を変えると、これからの予定の時刻がずれます。変えますか？')) return;
-      const v = Math.max(360, window.__startFloor(), Math.min(1435, r5(now)));
+      const v = Math.max(window.__startFloor(), Math.min(1435, r5(now)));
       await applyStart(v, `いま（${formatTime(v)}）から始めます`);
     }
   }
@@ -15289,6 +15303,7 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
   setInterval(() => { try { if (!appState.isAnimating) renderPanel(); } catch (_) {} }, 30000);
   // ---------- 「今日の起床時間」をドラムで聞く（アプリを開いた最初／時間割を保存した直後） ----------
   async function askTodayWake(opts) {
+    if (isUnusedActiveTab()) return null;
     const r = ensureRun(), now = getNowMinutes(), pw = plannedWake();
     const init = (opts && opts.initial != null) ? opts.initial : ((now >= 180 && now < 720) ? Math.max(0, Math.min(1380, r5(now))) : pw);
     r.key = appState.activeDay; r.wakeAsked = true; saveRun();   // 同じ日に何度も出さない
@@ -15831,7 +15846,7 @@ window.__structSig = function (list, withTime) {
     // 予約済みの「終了」通知と同じtagにして、先に出た分は置き換わる（二重表示を防ぐ）。iPhoneでも出るようServiceWorker経由。
     const d = new Date(); if (d.getHours() < 6) d.setDate(d.getDate() - 1);
     const logical = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    showSystemNotification('お疲れ様でした。', '記録をして結果を見ましょう。', `study-end-${appState.activeDay}-${logical}`, true);
+    showSystemNotification('お疲れ様でした。', '今日の学習項目の記録がすべて完了しました。', `study-end-${appState.activeDay}-${logical}`, true);
   };
   function check() {
     clearTimeout(timer);
@@ -15889,12 +15904,6 @@ window.__structSig = function (list, withTime) {
         try { const r = JSON.parse(localStorage.getItem('study_tracker_dayrun_v1') || 'null'); entered = !!(r && r.date === date && Number.isFinite(r.wakeActual)); } catch (_) {}
         const wakeKey = `wake:${day}:${date}`;
         if (!entered && !sentLocal.has(wakeKey)) { sentLocal.add(wakeKey); showSystemNotification('おはようございます', '起きた時間を入力して勉強をしましょう', `study-wake-${wakeKey}`); }
-      }
-      // 1日の最後の予定終了通知
-      const last = entries[entries.length - 1];
-      if (prefs.end !== false && last && now === last.endMins) {
-        const endKey = `end:${day}:${date}`;
-        if (!sentLocal.has(endKey)) { sentLocal.add(endKey); showSystemNotification('お疲れ様でした。', '記録をして結果を見ましょう。', `study-end-${endKey}`); }
       }
       // 遅れ通知（同じ1時間に1回）
       if (prefs.late !== false) {
@@ -16023,9 +16032,6 @@ window.__structSig = function (list, withTime) {
         nextInfo.set(id + '@' + at(nx.startMins - lead), { title: nx.item.title, lead });
       });
     });
-    // 5) 1日の最後だけ「お疲れ様でした」
-    const last = entries[entries.length - 1];
-    if (P.end && last) add(`end:${day}:${dk}`, at(last.endMins), `study-end-${day}-${dk}`, 'お疲れ様でした。', '記録をして結果を見ましょう。');
     // 6) 遅れがあるとき（同じ1時間に1回まで）
     let late = false; try { late = appState.activeDay === day && !!evaluateUnifiedDiagnosis(); } catch (_) {}
     if (P.late && late) out.push({ id: `late:${dk}:${Math.floor(now / 3600000)}`, t: now + 120000, tag: `study-late-${dk}`, title: '遅れがあります', body: '時間割を修正しましょう' });
@@ -16401,7 +16407,7 @@ window.__structSig = function (list, withTime) {
     ['now', '今の項目の通知', '各勉強の開始時に「今は〇〇です」'],
     ['next', '事前通知', '選んだ時間に「次は『〇〇』です」と知らせます（複数選択可）'],
     ['brk', '休憩の通知（◯×記録）', '休憩の開始時。タップで直前の勉強に◯×を付けられます'],
-    ['end', '終了の通知', '1日の最後に「お疲れ様でした。記録をして結果を見ましょう。」と知らせます'],
+    ['end', '終了の通知', '最後の勉強項目まで、すべての記録が入力されたときに知らせます'],
     ['late', '遅れの通知', '遅れがあるとき「時間割を修正しましょう」（1時間に1回まで）']
   ];
   function sw(id, on, dis) { return `<button type="button" role="switch" aria-checked="${on}"${dis ? ' disabled' : ''} data-k="${id}" style="flex:none;width:52px;height:30px;border-radius:15px;border:0;position:relative;background:${on ? '#059669' : '#9aa5b5'}"><span style="position:absolute;top:3px;left:${on ? 25 : 3}px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .15s"></span></button>`; }
