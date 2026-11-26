@@ -882,6 +882,24 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
   document.addEventListener('contextmenu',function(e){ if(!ok(e.target)) e.preventDefault(); },true);
 })();
 </script>
+
+<style id="universal-bottom-sheet-fix">
+@media(max-width:639px){
+ #result-modal,#reset-modal{align-items:flex-end!important;justify-content:center!important;padding:0!important;background:rgba(0,0,0,.48)!important;backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
+ #result-modal>div,#reset-modal>div{width:100%!important;max-width:none!important;max-height:86dvh!important;min-height:0;overflow:auto!important;border-radius:28px 28px 0 0!important;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))!important;transition:max-height .24s ease,border-radius .24s ease;overscroll-behavior:contain}
+ #result-modal.sheet-expanded>div,#reset-modal.sheet-expanded>div{max-height:100dvh!important;height:100dvh!important;border-radius:0!important;padding-top:calc(24px + env(safe-area-inset-top,0px))!important}
+}
+.app-sheet-overlay{position:fixed;inset:0;z-index:9000;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.48);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);padding:0;touch-action:pan-y}
+.app-sheet-panel{position:relative;width:100%;max-width:760px;max-height:86dvh;overflow:auto;overscroll-behavior:contain;border-radius:28px 28px 0 0;box-shadow:0 -12px 42px rgba(0,0,0,.22);transition:height .24s ease,max-height .24s ease,border-radius .24s ease;padding:0 14px calc(20px + env(safe-area-inset-bottom,0px));}
+.app-sheet-overlay.sheet-expanded{align-items:stretch}
+.app-sheet-overlay.sheet-expanded .app-sheet-panel{width:100%;max-width:none;height:100dvh;max-height:100dvh;border-radius:0;padding-top:calc(8px + env(safe-area-inset-top,0px))}
+.app-sheet-grabber{height:34px;display:flex;align-items:center;justify-content:center;position:sticky;top:0;z-index:5;touch-action:none;cursor:grab;background:inherit}
+.app-sheet-grabber:before,.app-modal-grabber:before{content:"";display:block;width:38px;height:5px;border-radius:9px;background:rgba(128,128,138,.48)}
+.app-sheet-close{position:absolute;right:12px;top:8px;z-index:8;width:38px;height:38px;border:0;border-radius:50%;background:rgba(128,128,138,.18);color:inherit;font-size:25px;line-height:1;display:flex;align-items:center;justify-content:center}
+.app-modal-grabber{height:25px;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:grab;position:relative;z-index:8}
+@media(min-width:640px){.app-sheet-overlay{align-items:center;padding:24px}.app-sheet-panel{border-radius:24px;max-height:90dvh}.app-sheet-overlay.sheet-expanded .app-sheet-panel{width:min(100%,900px);height:94dvh;max-height:94dvh;border-radius:24px}}
+</style>
+
 </head>
 <body class="min-h-screen pb-28 bg-m3bg text-m3ink dark:bg-darkBg dark:text-darkInk antialiased selection:bg-pri-100 selection:text-pri-900 dark:selection:bg-pri-900 dark:selection:text-pri-100 transition-colors duration-200">
 
@@ -9590,42 +9608,59 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
   });
 
   document.getElementById('sc-btn-export').addEventListener('click', async () => {
-    try { if (typeof _saveState === 'function') _saveState(); } catch (_) {}
-    const d = new Date();
-    const name = `study-backup-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json`;
-    const blob = new Blob([JSON.stringify({ app: 'study-tracker', version: 1, savedAt: d.toISOString(), data: snapshot() })], { type: 'application/json' });
-    // 公開ページでは通常のダウンロードが使えないので、保存の許可を取る方式で書き出す
     try {
-      const dl = (window.claude && window.claude.use) ? await window.claude.use('downloads') : null;
-      if (dl) {
-        try { await dl.save({ filename: name, data: blob }); showToast('バックアップを保存しました', 'emerald'); }
-        catch (e) { if (!(e && e.code === 'declined')) showToast('保存できませんでした。もう一度お試しください', 'rose'); }
-        return;
+      if (typeof _saveState === 'function') _saveState();
+      const data = snapshot();
+      if (!data['study_tracker_route_mgmt_v17']) throw new Error('メインの時間割データが見つかりません');
+      const parsed = JSON.parse(data['study_tracker_route_mgmt_v17']);
+      if (!parsed || typeof parsed !== 'object' || !parsed.schedules || typeof parsed.schedules !== 'object') throw new Error('時間割データが不正です');
+      const d = new Date();
+      const name = `study-backup-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json`;
+      const payload = { app: 'study-tracker', version: 2, savedAt: d.toISOString(), data };
+      const json = JSON.stringify(payload);
+      // 書き出し直前に再パースし、壊れたJSONをファイル化しない
+      const check = JSON.parse(json);
+      if (!check.data || !check.data['study_tracker_route_mgmt_v17']) throw new Error('バックアップ検証に失敗しました');
+      const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+      let saved = false;
+      try {
+        const dl = (window.claude && window.claude.use) ? await window.claude.use('downloads') : null;
+        if (dl && typeof dl.save === 'function') { await dl.save({ filename: name, data: blob }); saved = true; }
+      } catch (e) { if (e && e.code === 'declined') return; }
+      if (!saved) {
+        try {
+          const file = new File([blob], name, { type: 'application/json' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: '学習ルートのバックアップ' }); saved = true; }
+        } catch (err) { if (err && err.name === 'AbortError') return; }
       }
-    } catch (_) {}
-    try {
-      const file = new File([blob], name, { type: 'application/json' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: '学習ルートのバックアップ' }); return; }
-    } catch (err) { if (err && err.name === 'AbortError') return; }
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = name;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-    showToast('バックアップを保存しました', 'emerald');
+      if (!saved) {
+        const url = URL.createObjectURL(blob), a = document.createElement('a');
+        a.href = url; a.download = name; a.style.display = 'none'; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 15000); saved = true;
+      }
+      if (saved) showToast('バックアップを保存しました（データ検証済み）', 'emerald');
+    } catch (e) {
+      console.error('backup export failed', e);
+      showToast('バックアップを作成できませんでした：' + (e.message || 'データを確認してください'), 'rose');
+    }
   });
 
   // confirm() は公開ページでは使えないため、ページ内の確認ダイアログを使う
   function askOk(msg, okText) {
     return new Promise((resolve) => {
       const w = document.createElement('div');
-      w.style.cssText = 'position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.5)';
-      w.innerHTML = '<div style="max-width:340px;width:100%;border-radius:22px;padding:18px;background:#fff;color:#1A1C1E;font-weight:800;font-size:14px;line-height:1.6;box-shadow:0 20px 50px rgba(0,0,0,.35)"><div style="margin-bottom:14px"></div><div style="display:flex;gap:8px"><button type="button" data-n style="flex:1;padding:10px;border:0;border-radius:999px;background:#e2e8f0;color:#1A1C1E;font-weight:800">やめる</button><button type="button" data-y style="flex:1;padding:10px;border:0;border-radius:999px;background:#4f46e5;color:#fff;font-weight:800"></button></div></div>';
-      w.querySelector('div > div').textContent = msg;
+      w.className = 'app-sheet-overlay';
+      w.innerHTML = '<section class="app-sheet-panel" role="dialog" aria-modal="true" style="background:#fff;color:#1A1C1E;font-weight:800;font-size:14px;line-height:1.6;padding-top:0"><div class="app-sheet-grabber" aria-label="上にスワイプで全画面、下にスワイプで閉じる"></div><button type="button" data-close aria-label="閉じる" class="app-sheet-close">×</button><div data-msg style="padding:8px 4px 16px"></div><div style="display:flex;gap:8px;padding-bottom:4px"><button type="button" data-n style="flex:1;padding:11px;border:0;border-radius:999px;background:#e2e8f0;color:#1A1C1E;font-weight:800">やめる</button><button type="button" data-y style="flex:1;padding:11px;border:0;border-radius:999px;background:#4f46e5;color:#fff;font-weight:800"></button></div></section>';
+      w.querySelector('[data-msg]').textContent = msg;
       w.querySelector('[data-y]').textContent = okText || 'OK';
       const done = (v) => { w.remove(); resolve(v); };
       w.querySelector('[data-y]').onclick = () => done(true);
       w.querySelector('[data-n]').onclick = () => done(false);
+      w.querySelector('[data-close]').onclick = () => done(false);
       w.addEventListener('click', (e) => { if (e.target === w) done(false); });
+      const grab = w.querySelector('.app-sheet-grabber'); let sy=0;
+      grab.addEventListener('touchstart',e=>{if(e.touches[0])sy=e.touches[0].clientY},{passive:true});
+      grab.addEventListener('touchend',e=>{if(e.changedTouches[0]){const dy=e.changedTouches[0].clientY-sy;if(dy < -35)w.classList.add('sheet-expanded');else if(dy>65)done(false)}},{passive:true});
       document.body.appendChild(w);
     });
   }
@@ -9635,19 +9670,52 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
     const f = fileInput.files && fileInput.files[0];
     fileInput.value = '';
     if (!f) return;
+    const before = snapshot();
+    let applied = [];
     try {
-      const obj = JSON.parse(await f.text());
-      const data = obj && obj.data;
-      if (!data || typeof data !== 'object') throw new Error('bad');
-      const keys = Object.keys(data).filter(k => k.indexOf(KEY_PREFIX) === 0 && typeof data[k] === 'string');
-      if (!keys.length) throw new Error('empty');
-      if (!(await askOk('今の記録をバックアップの内容で置き換えます。よろしいですか？', '置き換える'))) return;
-      const imported = new Set(keys);
-      Object.keys(snapshot()).filter(k => !imported.has(k)).forEach(k =>  __ls.remove(k));
-      keys.forEach(k =>  __ls.set(k, data[k]));
-      location.reload();
-    } catch (_) {
-      showToast('バックアップファイルを読み込めませんでした', 'rose');
+      if (f.size <= 0 || f.size > 50 * 1024 * 1024) throw new Error('ファイルサイズが不正です（50MB以下のJSONを選択してください）');
+      const raw = await f.text();
+      let obj; try { obj = JSON.parse(raw.replace(/^\uFEFF/, '')); } catch (_) { throw new Error('JSONの形式が壊れています'); }
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) throw new Error('バックアップの形式が違います');
+      // v1/v2形式に加え、旧版の「キーを直下に持つ」形式も受け入れる
+      const data = (obj.data && typeof obj.data === 'object' && !Array.isArray(obj.data)) ? obj.data : obj;
+      const entries = Object.entries(data).filter(([k,v]) => typeof k === 'string' && k.startsWith(KEY_PREFIX) && typeof v === 'string');
+      if (!entries.length) throw new Error('学習データが見つかりません');
+      const valid = [], invalid = [];
+      for (const [k,v] of entries) {
+        try { JSON.parse(v); valid.push([k,v]); } catch (_) { invalid.push(k); }
+      }
+      const main = valid.find(([k]) => k === 'study_tracker_route_mgmt_v17');
+      if (!main) throw new Error('メインの時間割データがないか、JSONが破損しています');
+      const mainObj = JSON.parse(main[1]);
+      if (!mainObj || typeof mainObj !== 'object' || !mainObj.schedules || typeof mainObj.schedules !== 'object' || Array.isArray(mainObj.schedules)) throw new Error('時間割データの構造が正しくありません');
+      const scheduleKeys = Object.keys(mainObj.schedules);
+      if (!scheduleKeys.some(k => Array.isArray(mainObj.schedules[k]))) throw new Error('読み込める時間割がありません');
+      const summary = `読み込み対象：${valid.length}項目
+${invalid.length ? `破損しているため除外：${invalid.length}項目
+` : ''}現在の記録をバックアップ内容に置き換えます。続けますか？`;
+      if (!(await askOk(summary, '復元する'))) return;
+      // 既存キーを先に退避。書き込み失敗時は全キーを元に戻す。
+      const validKeys = new Set(valid.map(([k]) => k));
+      try {
+        Object.keys(before).filter(k => !validKeys.has(k)).forEach(k => { __ls.remove(k); });
+        for (const [k,v] of valid) {
+          if (!__ls.set(k,v) || __ls.get(k) !== v) throw new Error('保存領域が不足しているか、書き込みに失敗しました');
+          applied.push(k);
+        }
+        const storedMain = JSON.parse(__ls.get('study_tracker_route_mgmt_v17') || 'null');
+        if (!storedMain || !storedMain.schedules) throw new Error('復元後の確認に失敗しました');
+      } catch (writeErr) {
+        // rollback: restore original values and remove newly introduced keys
+        Object.keys(snapshot()).filter(k => !(k in before)).forEach(k => __ls.remove(k));
+        Object.entries(before).forEach(([k,v]) => __ls.set(k,v));
+        throw writeErr;
+      }
+      showToast(invalid.length ? `復元しました（破損 ${invalid.length} 項目は除外）` : 'バックアップを復元しました', 'emerald');
+      setTimeout(() => location.reload(), 350);
+    } catch (e) {
+      console.error('backup import failed', e);
+      showToast('バックアップを読み込めませんでした：' + (e.message || 'ファイルを確認してください'), 'rose');
     }
   });
 })();
@@ -11823,8 +11891,17 @@ window.openEstDrum = async function (cur) {
 
   function sheet(inner, noBar) {
     const c = C(), w = document.createElement('div');
-    w.style.cssText = `position:fixed;inset:0;z-index:310;overflow-y:auto;background:${c.bg};color:${c.ink};font-weight:700;font-size:14px;line-height:1.6;padding:calc(env(safe-area-inset-top,0px) + 14px) 14px calc(env(safe-area-inset-bottom,0px) + ${noBar ? 24 : 96}px)`;
-    w.innerHTML = inner;
+    w.className = 'app-sheet-overlay';
+    w.innerHTML = `<section class="app-sheet-panel" role="dialog" aria-modal="true" style="background:${c.bg};color:${c.ink};font-weight:700;font-size:14px;line-height:1.6"><div class="app-sheet-grabber" aria-label="上にスワイプで全画面、下にスワイプで閉じる"></div><button type="button" class="app-sheet-close" aria-label="閉じる">×</button><div class="app-sheet-content" style="padding-bottom:${noBar ? '4px' : '72px'}">${inner}</div></section>`;
+    const panel = w.querySelector('.app-sheet-panel'), grab = w.querySelector('.app-sheet-grabber');
+    const close = () => w.remove();
+    w.querySelector('.app-sheet-close').addEventListener('click', close);
+    w.addEventListener('click', e => { if (e.target === w) close(); });
+    let startY = 0, lastY = 0, dragging = false;
+    grab.addEventListener('touchstart', e => { if (!e.touches[0]) return; startY = lastY = e.touches[0].clientY; dragging = true; }, {passive:true});
+    grab.addEventListener('touchend', e => { if (!dragging) return; const dy = (e.changedTouches[0]?.clientY || lastY) - startY; dragging = false; if (dy < -35) w.classList.add('sheet-expanded'); else if (dy > 65) close(); }, {passive:true});
+    grab.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') return; startY = lastY = e.clientY; dragging = true; grab.setPointerCapture?.(e.pointerId); });
+    grab.addEventListener('pointerup', e => { if (!dragging || e.pointerType === 'touch') return; const dy=e.clientY-startY; dragging=false; if(dy < -35) w.classList.add('sheet-expanded'); else if(dy > 65) close(); });
     document.body.appendChild(w);
     return w;
   }
@@ -16691,6 +16768,34 @@ html:not(.dark) body [style*="color:var(--ok)"]{color:#137333!important}
   }, { passive: false, capture: true });
   document.addEventListener('touchend', () => { ctx = null; }, { passive: true, capture: true });
   document.addEventListener('touchcancel', () => { ctx = null; }, { passive: true, capture: true });
+})();
+</script>
+<script id="universal-modal-gestures">
+(function(){
+  function setup(rootId, closeName){
+    const root=document.getElementById(rootId); if(!root) return;
+    const panel=root.firstElementChild; if(!panel) return;
+    if(!panel.querySelector('.app-modal-grabber')){
+      const g=document.createElement('div'); g.className='app-modal-grabber'; g.setAttribute('aria-label','上にスワイプで全画面、下にスワイプで閉じる'); panel.insertBefore(g,panel.firstChild);
+      let y=0,active=false;
+      const close=()=>{ if(closeName==='result') window.closeResultModal?.(); else window.closeResetModal?.(); };
+      const begin=py=>{y=py;active=true};
+      const finish=py=>{if(!active)return;active=false;const dy=py-y;if(dy < -35)root.classList.add('sheet-expanded');else if(dy>65)close()};
+      g.addEventListener('touchstart',e=>{if(e.touches[0])begin(e.touches[0].clientY)},{passive:true});
+      g.addEventListener('touchend',e=>{if(e.changedTouches[0])finish(e.changedTouches[0].clientY)},{passive:true});
+      g.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')begin(e.clientY)});
+      g.addEventListener('pointerup',e=>{if(e.pointerType!=='touch')finish(e.clientY)});
+    }
+    if(rootId==='reset-modal'&&!panel.querySelector('.app-modal-close')){
+      const b=document.createElement('button');b.type='button';b.className='app-modal-close';b.textContent='×';b.setAttribute('aria-label','閉じる');
+      b.style.cssText='position:absolute;right:14px;top:10px;z-index:10;width:38px;height:38px;border:0;border-radius:50%;background:rgba(128,128,138,.18);color:inherit;font-size:25px';
+      b.addEventListener('click',()=>window.closeResetModal?.());panel.style.position='relative';panel.appendChild(b);
+    }
+    const originalClose=closeName==='result'?window.closeResultModal:window.closeResetModal;
+    if(typeof originalClose==='function'&&!originalClose.__sheetWrapped){const wrapped=function(){root.classList.remove('sheet-expanded');return originalClose.apply(this,arguments)};wrapped.__sheetWrapped=true;if(closeName==='result')window.closeResultModal=wrapped;else window.closeResetModal=wrapped;}
+  }
+  function init(){setup('result-modal','result');setup('reset-modal','reset')}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
 </body>
