@@ -1,5 +1,5 @@
 /* 学習ルート Service Worker：プッシュ通知の受信 + 簡易オフライン */
-const CACHE = 'study-route-v1';
+const CACHE = 'study-route-v2';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-180.png', './push-config.js'];
 
 self.addEventListener('install', (e) => {
@@ -35,9 +35,13 @@ self.addEventListener('push', (e) => {
 });
 
 self.addEventListener('notificationclick', (e) => {
+  const tag = e.notification.tag || '';
+  const isBreak = tag.indexOf('study-break-') === 0;   // 休憩通知：開いたら◯×の記録画面を出す
   e.notification.close();
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-    for (const c of list) { if ('focus' in c) return c.focus(); }
-    return self.clients.openWindow('./');
+    for (const c of list) {
+      if ('focus' in c) { if (isBreak) c.postMessage({ type: 'check' }); return c.focus(); }
+    }
+    return self.clients.openWindow(isBreak ? './?check=1' : './');
   }));
 });
