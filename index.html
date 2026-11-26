@@ -15632,6 +15632,9 @@ window.__structSig = function (list, withTime) {
   const read = () => { try { return JSON.parse( __ls.get(KEY) || '{"enabled":false}'); } catch (_) { return { enabled: false }; } };
   let config = read(), initialized = false, seenKey = '', armedKey = '', timer = 0;
   const sentLocal = new Set();
+  // 通知は「今日の曜日パターン」の予定で作る。いま画面で開いている曜日タブ(別パターンを見ているだけのとき)の予定は使わない。
+  const todayKey = () => { try { const k = window.todayPatternKey && window.todayPatternKey(); if (k && appState.schedules && appState.schedules[k]) return k; } catch (_) {} return appState.activeDay; };
+  const withDay = (day, fn) => { const prev = appState.activeDay; if (prev === day) return fn(); appState.activeDay = day; try { return fn(); } finally { appState.activeDay = prev; } };
   const write = () => { try {  __ls.set(KEY, JSON.stringify(config)); } catch (_) {} };
   const itemKey = (day, date, item) => `${day}:${date}:${item.id}`;
   const dateKey = () => {
@@ -15672,6 +15675,7 @@ window.__structSig = function (list, withTime) {
   window.notifyStudyCompletion = function () {
     if (!config.enabled || !('Notification' in window) || Notification.permission !== 'granted') return;
     try { if (JSON.parse(localStorage.getItem('study_tracker_notify_prefs_v1') || '{}').end === false) return; } catch (_) {}   // 「終了の通知」がオフなら鳴らさない
+    if (appState.activeDay !== todayKey()) return;   // 別の曜日タブを見ているだけのときは、今日の終了通知にしない
     const today = `${dateKey()}:${appState.activeDay}`;
     if (config.completionKey === today) return;
     config.completionKey = today; write();
@@ -15685,8 +15689,8 @@ window.__structSig = function (list, withTime) {
     if (!config.enabled || !('Notification' in window) || Notification.permission !== 'granted') return;
     try {
       const now = Math.floor(getNowMinutes());
-      const day = appState.activeDay, date = dateKey();
-      const entries = recalcTimeline().entries || [];
+      const day = todayKey(), date = dateKey();
+      const entries = withDay(day, () => recalcTimeline().entries) || [];
       const current = entries.find(e => e.startMins <= now && e.endMins > now);
       const next = entries.find(e => e.startMins > now);
       const currentKey = current ? itemKey(day, date, current.item) : '';
@@ -15745,7 +15749,7 @@ window.__structSig = function (list, withTime) {
       }
       // 遅れ通知（同じ1時間に1回）
       if (prefs.late !== false) {
-        let late = false; try { late = !!evaluateUnifiedDiagnosis(); } catch (_) {}
+        let late = false; try { late = appState.activeDay === day && !!evaluateUnifiedDiagnosis(); } catch (_) {}
         const lateKey = `late:${date}:${Math.floor(Date.now()/3600000)}`;
         if (late && !sentLocal.has(lateKey)) { sentLocal.add(lateKey); showSystemNotification('遅れがあります', '時間割を修正しましょう', lateKey); }
       }
@@ -15806,6 +15810,9 @@ window.__structSig = function (list, withTime) {
   const supported = () => CFG.api && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && /^https?:$/.test(location.protocol);
   const u8 = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(s.length / 4) * 4, '=')), c => c.charCodeAt(0));
   let regP = null, syncTimer = 0, lastBody = '';
+  // 通知は「今日の曜日パターン」の予定で作る。いま画面で開いている曜日タブ(別パターンを見ているだけのとき)の予定は使わない。
+  const todayKey = () => { try { const k = window.todayPatternKey && window.todayPatternKey(); if (k && appState.schedules && appState.schedules[k]) return k; } catch (_) {} return appState.activeDay; };
+  const withDay = (day, fn) => { const prev = appState.activeDay; if (prev === day) return fn(); appState.activeDay = day; try { return fn(); } finally { appState.activeDay = prev; } };
 
   function reg() {
     if (!regP) regP = navigator.serviceWorker.register('./sw.js').then(() => navigator.serviceWorker.ready);
@@ -15824,8 +15831,8 @@ window.__structSig = function (list, withTime) {
   function buildEvents() {
     const base = logicalToday();
     const dk = `${base.getFullYear()}-${pad(base.getMonth() + 1)}-${pad(base.getDate())}`;
-    const now = Date.now(), day = appState.activeDay;
-    const entries = (recalcTimeline().entries || []);
+    const now = Date.now(), day = todayKey();
+    const entries = withDay(day, () => recalcTimeline().entries) || [];
     const at = (m) => base.getTime() + m * 60000;
     const isBrk = (it) => /^break/.test(it.kind || '');
     let P = { wake: true, now: true, next: true, nextLead: 3, nextLeads: [3], brk: true, end: true, late: true };
@@ -15871,7 +15878,7 @@ window.__structSig = function (list, withTime) {
     const last = entries[entries.length - 1];
     if (P.end && last) add(`end:${day}:${dk}`, at(last.endMins), `study-end-${day}-${dk}`, 'お疲れ様でした。', '記録をして結果を見ましょう。');
     // 6) 遅れがあるとき（同じ1時間に1回まで）
-    let late = false; try { late = !!evaluateUnifiedDiagnosis(); } catch (_) {}
+    let late = false; try { late = appState.activeDay === day && !!evaluateUnifiedDiagnosis(); } catch (_) {}
     if (P.late && late) out.push({ id: `late:${dk}:${Math.floor(now / 3600000)}`, t: now + 120000, tag: `study-late-${dk}`, title: '遅れがあります', body: '時間割を修正しましょう' });
     const ta = window.__pushTestAt;   // 設定画面の「テスト通知」
     if (ta && ta > now + 15000) out.push({ id: 'test:' + ta, t: ta, tag: 'study-test', title: 'テスト通知', body: 'アプリを閉じていても通知が届いています' });
@@ -15904,7 +15911,7 @@ window.__structSig = function (list, withTime) {
     try {
       const s = await getSub(true);
       const events = buildEvents();
-      const body = JSON.stringify(events.map(e => e.id));
+      const body = JSON.stringify(events.map(e => [e.id, e.title, e.body, e.tag]));   // 項目名だけ変わった時も再送する
       if (!force && body === lastBody && window.__pushActive) return;   // 予定が変わっていなければ送らない
       await post('/sync', { subscription: s.toJSON(), events });
       lastBody = body; window.__pushActive = true;
@@ -15953,7 +15960,7 @@ window.__structSig = function (list, withTime) {
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden) syncNow(true); else soon(800); });
   window.addEventListener('pagehide', () => { syncNow(true); });
-  setInterval(() => soon(100), 5 * 60000);
+  setInterval(() => soon(100), 60000);   // 開いている間は1分ごとに、予定が変わっていないか確認して送り直す
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) reg().catch(() => {});
   soon(1500);
 })();
@@ -16175,7 +16182,7 @@ window.__structSig = function (list, withTime) {
   window.openNotifySettings = function () {
     const old = document.getElementById('notify-settings'); if (old) old.remove();
     const root = document.createElement('div'); root.id = 'notify-settings';
-    root.style.cssText = 'position:fixed;inset:0;z-index:2147483640;background:#fff;color:#1d2430;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(12px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px))';
+    root.style.cssText = 'position:fixed;inset:0;z-index:2147483640;background:#fff;color:#1d2430;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:calc(12px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px))';
     if (matchMedia('(prefers-color-scheme: dark)').matches || document.documentElement.classList.contains('dark')) root.style.cssText += ';background:#14171c;color:#e8ebf0';
     root.innerHTML = '<div style="max-width:560px;margin:0 auto"><button type="button" id="ns-back" style="font-size:16px;font-weight:700;color:#4f46e5;background:none;border:0;padding:8px 0">‹ 戻る</button><h2 style="font-size:22px;font-weight:900;margin:4px 0 0">通知の設定</h2><div id="ns-body"></div></div>';
     document.body.appendChild(root);
@@ -16357,5 +16364,51 @@ html[data-design="apple"]:not(.dark) .cc-kind-tag{color:#0050B3!important}
 html[data-design="apple"].dark .cc-kind-tag:not(.is-fixed){color:#82BEFF!important}
 html:not(.dark) body [style*="color:var(--ok)"]{color:#137333!important}
 </style>
+<script>
+/* 画面いっぱいの別画面（通知の設定・各種シート・ダイアログ）を触っている間は、後ろの時間割がスクロールしないようにする。
+   別画面の中にスクロールできる場所があればそこだけが動き、端まで行ってもページには伝えない。 */
+(function () {
+  'use strict';
+  const SKIP_IDS = { 'cat-scrim': 1, 'sc-tips': 1, 'lock-popup': 1 };
+  let ctx = null, lastY = 0, lastX = 0;
+  const isFullScreen = (el, cs) => {
+    if (cs.position !== 'fixed' || cs.pointerEvents === 'none' || cs.display === 'none' || cs.visibility === 'hidden') return false;
+    if (SKIP_IDS[el.id]) return false;
+    const r = el.getBoundingClientRect();
+    return r.width >= innerWidth * 0.9 && r.height >= innerHeight * 0.9;
+  };
+  const scrollable = (el, cs) => /(auto|scroll)/.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 1;
+  function analyze(target) {
+    const scrollers = [];
+    for (let el = target; el && el.nodeType === 1 && el !== document.documentElement; el = el.parentElement) {
+      const cs = getComputedStyle(el);
+      if (isFullScreen(el, cs)) {
+        if (scrollable(el, cs)) scrollers.push(el);
+        return { scrollers };
+      }
+      if (scrollable(el, cs)) scrollers.push(el);
+    }
+    return null;   // 全画面の別画面の外 → ふつうにスクロールさせる
+  }
+  document.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) { ctx = null; return; }
+    lastY = e.touches[0].clientY; lastX = e.touches[0].clientX;
+    ctx = analyze(e.target);
+  }, { passive: true, capture: true });
+  document.addEventListener('touchmove', (e) => {
+    if (!ctx || e.touches.length !== 1 || !e.cancelable) return;
+    const y = e.touches[0].clientY, x = e.touches[0].clientX;
+    const dy = y - lastY, dx = x - lastX; lastY = y; lastX = x;
+    if (Math.abs(dx) > Math.abs(dy) || dy === 0) return;   // 横方向の操作は邪魔しない
+    const up = dy > 0;   // 指が下へ＝上にスクロール
+    for (const s of ctx.scrollers) {
+      if (up ? s.scrollTop > 0 : s.scrollTop + s.clientHeight < s.scrollHeight - 1) return;   // まだ動ける場所があればそこが動く
+    }
+    e.preventDefault();   // 動ける場所がない → 後ろのページには渡さない
+  }, { passive: false, capture: true });
+  document.addEventListener('touchend', () => { ctx = null; }, { passive: true, capture: true });
+  document.addEventListener('touchcancel', () => { ctx = null; }, { passive: true, capture: true });
+})();
+</script>
 </body>
 </html>
