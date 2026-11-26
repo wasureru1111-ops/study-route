@@ -881,33 +881,6 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
 </head>
 <body class="min-h-screen pb-28 bg-m3bg text-m3ink dark:bg-darkBg dark:text-darkInk antialiased selection:bg-pri-100 selection:text-pri-900 dark:selection:bg-pri-900 dark:selection:text-pri-100 transition-colors duration-200">
 
-  <!-- 右側固定フローティング「修正案」ボタン -->
-  <button type="button" id="floating-proposal-btn" onclick="showProposalNow()"
-    class="tap-spring fixed right-3 sm:right-5 z-40 flex items-center gap-1.5 pl-3 pr-3.5 py-2.5 rounded-full bg-amber-500 hover:bg-amber-400 text-white shadow-xl border border-amber-300/70 dark:bg-amber-500 dark:border-amber-300/60"
-    aria-label="修正案を表示">
-    <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M12 3L14.2 8.8L20 11L14.2 13.2L12 19L9.8 13.2L4 11L9.8 8.8L12 3Z" fill="currentColor" fill-opacity="0.3" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-    </svg>
-    <span class="text-[11px] sm:text-xs font-black tracking-tight">修正案</span>
-  </button>
-
-  <!-- 右下固定フローティング「今の枠へ」現在時刻ジャンプボタン -->
-  <button type="button" id="floating-jump-btn" onclick="jumpToCurrentTimeItem(false)"
-    class="tap-spring fixed right-3 bottom-20 sm:right-5 sm:bottom-24 z-40 flex items-center gap-2 pl-3 pr-3.5 py-2.5 rounded-full bg-pri-600 hover:bg-pri-500 text-white shadow-xl border border-pri-400/70 dark:bg-pri-500 dark:hover:bg-pri-400 dark:border-pri-300/60"
-    aria-label="現在時刻の項目へスクロール移動">
-    <span class="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center shrink-0">
-      <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <circle cx="12" cy="12" r="7.5" stroke="currentColor" stroke-width="2.1"/>
-        <path d="M12 2.5V5M12 19V21.5M2.5 12H5M19 12H21.5" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/>
-        <circle cx="12" cy="12" r="2.2" fill="currentColor"/>
-      </svg>
-    </span>
-    <span class="flex flex-col items-start leading-none text-left">
-      <span class="text-[11px] sm:text-xs font-black tracking-tight">今の枠へ</span>
-      <span id="floating-jump-time" class="font-num tabular-nums text-[10px] font-bold text-pri-100 mt-0.5">--:--</span>
-    </span>
-  </button>
-
   <!-- 自動修正中の上部フローティング進行バナー -->
   <div id="autofix-progress-banner"
     class="fixed top-3 left-1/2 -translate-x-1/2 z-50 hidden pointer-events-none max-w-[calc(100vw-1.5rem)]"
@@ -6196,7 +6169,7 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
         if (window.__lastDayTap && window.__lastDayTap.k === dk && nowT - window.__lastDayTap.t < 400) {   // ダブルタップ：その時間割を「今日の予定」に切り替える
           window.__lastDayTap = null;
           if (dk !== todayPatternKey()) { window.setTodayPattern(dk); try { showToast(`「${dayMain(dk)}」を今日の予定にしました`, 'emerald'); } catch (_) {} }
-          __daySig = ''; switchDay(dk); return;
+          __daySig = ''; switchDay(dk, true); return;
         }
         window.__lastDayTap = { k: dk, t: nowT };
         switchDay(dk);
@@ -8061,14 +8034,36 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
       return copy;
     }
 
-    function switchDay(dayKey) {
+    let daySwitchRenderRaf = 0;
+    function renderDaySwitch() {
+      daySwitchRenderRaf = 0;
+      if (!appState.editMode) appState.editProposal = false;
+      renderNoDaysScreen();
+      syncTodayHistory();
+      renderSegmentedControl();
+      renderEditModeButton();
+      renderScheduleCards();
+      renderSummaryCard();
+      renderPastPendingBanner();
+      renderResultCTAs();
+      renderBedtimeChecklist();
+      renderInlineResult();
+      renderCoachFloatingPopup();
+      try { if (window.__syncDaySwitchPanel) window.__syncDaySwitchPanel(); } catch (_) {}
+      try { if (window.__refreshPomodoro) window.__refreshPomodoro(); } catch (_) {}
+      try { if (window.__scRefresh) window.__scRefresh(); } catch (_) {}
+    }
+
+    function switchDay(dayKey, force) {
+      if (allDayKeys().indexOf(dayKey) === -1) return;
+      if (dayKey === appState.activeDay && !force) return;
       try { closeResultModal(); } catch (_) {}   // リザルトは、選んでいる曜日のぶんだけ。曜日を変えたら閉じる
       appState.activeDay = dayKey;
       appState.trackingBadge = null;
       appState.jumpHighlight = null;
       appState.openDrawerItemId = null;
-      saveState();
-      renderAll();
+      if (daySwitchRenderRaf) cancelAnimationFrame(daySwitchRenderRaf);
+      daySwitchRenderRaf = requestAnimationFrame(renderDaySwitch);
     }
 
     function getFutureMovableIds() {
@@ -8301,8 +8296,14 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
       initSound();
       initStudyHistory();
       loadState();
+      try {
+        const todayDay = todayPatternKey();
+        if (allDayKeys().indexOf(todayDay) !== -1) appState.activeDay = todayDay;
+      } catch (_) {}
       bindCardSwipeGestures();
       renderAll();
+      try { if (window.__scRefresh) window.__scRefresh(); } catch (_) {}
+      try { if (window.__showShortcutFab) window.__showShortcutFab(); } catch (_) {}
       updateCurrentTime();
       maybeShowDailyReport();
       const timeSig = () => {
@@ -8347,7 +8348,8 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
 <!-- ===== 動かせるショートカット丸ボタン ===== -->
 <style id="sc-fab-style">
   #floating-proposal-btn, #floating-jump-btn { display: none !important; }
-  #sc-fab { position: fixed; left: 0; top: 0; width: 48px; height: 48px; z-index: 70; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+  #sc-fab { position: fixed; left: 0; top: 0; width: 48px; height: 48px; z-index: 70; visibility: hidden; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+  #sc-fab.ready { visibility: visible; }
   #sc-main { position: absolute; inset: 0; touch-action: none; border-radius: 50%; border: 0; padding: 0; background: linear-gradient(135deg, #818cf8, #4f46e5); color: #fff; box-shadow: 0 6px 16px rgba(79,70,229,.45), 0 0 0 3px rgba(255,255,255,.6); display: flex; align-items: center; justify-content: center; z-index: 3; cursor: grab; transition: transform .35s cubic-bezier(.22,1,.36,1); }
   html.dark #sc-main { box-shadow: 0 6px 16px rgba(0,0,0,.5), 0 0 0 3px rgba(30,41,59,.9); }
   #sc-fab.dragging #sc-main { cursor: grabbing; transform: scale(1.14); }
@@ -8968,6 +8970,7 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
     }
   }
   restorePos();
+  window.__showShortcutFab = function () { fab.classList.add('ready'); };
   // しばらく触らなかったら、定位置（右下）へゆっくり戻る
   const HOME_MS = 7000;
   let homeTimer = null, homing = false;
@@ -14023,6 +14026,27 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
     panel.innerHTML = `<div style="display:grid;gap:8px;margin:0 0 10px">${wakeRow ? `<div>${wakeRow}</div>` : ''}${startRow}</div>`;
   }
 
+  window.__syncDaySwitchPanel = function () {
+    try {
+      const key = appState.activeDay, ed = appState.editMode;
+      if (!ed) appState.editProposal = false;
+      const e = document.getElementById('wake-badge-text');
+      if (e) {
+        e.parentElement.style.display = isUnusedActiveTab() ? 'none' : '';
+        e.textContent = formatTime(wakeMinsFor(key)) + ' 起床スタート' + (ed ? ' ✎' : '');
+        if (!ed && run && run.key === key && Number.isFinite(run.startMins)) e.textContent = formatTime(run.startMins) + ' 勉強スタート';
+        e.parentElement.style.cursor = ed ? 'pointer' : '';
+        e.parentElement.style.outline = ed ? '2px dashed #f59e0b' : '';
+      }
+      document.querySelectorAll('[data-end-label]').forEach(x => {
+        x.textContent = (endMinsFor(key) >= 1440 ? '翌' : '') + formatTime(endMinsFor(key)) + (ed ? ' ✎' : '');
+        x.parentElement.style.cursor = ed ? 'pointer' : '';
+        x.parentElement.style.outline = ed ? '2px dashed #f59e0b' : '';
+      });
+      renderPanel();
+    } catch (_) {}
+  };
+
   async function onClick(e) {
     const b = e.target.closest('[data-act]'); if (!b) return;
     const act = b.dataset.act, r = ensureRun(), now = getNowMinutes(), pw = plannedWake();
@@ -15603,11 +15627,15 @@ window.__structSig = function (list, withTime) {
   function send(entry, key) {
     if (window.__pushActive) return;   // サーバーからのプッシュ通知が有効なときは二重に鳴らさない
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
-    try { if (JSON.parse(localStorage.getItem('study_tracker_notify_prefs_v1') || '{}').now === false) return; } catch (_) {}   // 「今の項目の通知」がオフなら鳴らさない
+    const isBreak = /^break/.test(entry.item.kind || '');
     try {
-      new Notification(`次は${entry.item.title}です。頑張りましょう`, {
-        body: `${formatTime(entry.startMins)}からの予定です`,
-        tag: `study-next-${key}`,
+      const prefs = JSON.parse(localStorage.getItem('study_tracker_notify_prefs_v1') || '{}');
+      if (isBreak ? prefs.brk === false : prefs.now === false) return;
+    } catch (_) {}
+    try {
+      new Notification(isBreak ? 'お疲れ様です。' : `今は『${entry.item.title}』です。`, {
+        body: isBreak ? '休憩を取りましょう。' : '頑張りましょう。',
+        tag: `${isBreak ? 'study-break' : 'study-now'}-${key}`,
         renotify: false
       });
     } catch (_) {}
@@ -15619,8 +15647,8 @@ window.__structSig = function (list, withTime) {
     if (config.completionKey === today) return;
     config.completionKey = today; write();
     try {
-      new Notification('今日の学習が完了しました！', {
-        body: 'お疲れさまでした。今日の振り返りを確認できます。',
+      new Notification('お疲れ様でした。', {
+        body: '記録をして結果を見ましょう。',
         tag: `study-complete-${today}`,
         renotify: false
       });
@@ -15728,37 +15756,35 @@ window.__structSig = function (list, withTime) {
     const isBrk = (it) => /^break/.test(it.kind || '');
     let P = { wake: true, now: true, next: true, nextLead: 3, brk: true, end: true, late: true };
     try { Object.assign(P, JSON.parse(localStorage.getItem('study_tracker_notify_prefs_v1') || '{}')); } catch (_) {}
-    const lead = Math.max(1, Math.min(30, Number(P.nextLead) || 3));   // 「次の項目」を何分前に知らせるか
+    const lead = Math.max(1, Math.min(30, Number(P.nextLead) || 3));   // 切替の何分前に、現在の項目を事前通知するか
     const out = [];
     const add = (key, t, tag, title, body) => { if (t > now + 15000) out.push({ id: key + '@' + t, t, tag, title, body }); };
     // 1) 起床：1日1回だけ。今日の「起きた時間」をまだ入力していないときだけ、予定の起床時刻に知らせる
     if (P.wake && !wakeEntered()) add(`wake:${day}:${dk}`, at(wakeMinsFor(day)), `study-wake-${day}-${dk}`, 'おはようございます', '起きた時間を入力して勉強をしましょう');
     entries.forEach((e, i) => {
-      const it = e.item, k = `${day}:${dk}:${it.id}`, prev = entries[i - 1], nx = entries[i + 1];
+      const it = e.item, k = `${day}:${dk}:${it.id}`, nx = entries[i + 1];
       if (it.kind === 'study') {
         const N = it.sets > 0 ? it.sets : 0;
         if (N === 0) {
-          if (P.now) add(`now:${k}`, at(e.startMins), `study-now-${k}`, `今は${it.title}です`, `${formatTime(e.startMins)}〜${formatTime(e.endMins)}。集中しましょう`);
+          if (P.now) add(`now:${k}`, at(e.startMins), `study-now-${k}`, `今は『${it.title}』です。`, '頑張りましょう。');
         } else {
           for (let n = 0; n < N; n++) {
             const ss = e.startMins + 30 * n; if (ss >= e.endMins) break;
             // 2) 今の項目：各セットの開始（25分集中）
-            if (P.now) add(`now:${k}:${n}`, at(ss), `study-now-${k}-${n}`, `今は${it.title}です（${n + 1}/${N}セット目）`, `25分集中！ ${formatTime(ss)}〜${formatTime(ss + 25)}`);
+            if (P.now) add(`now:${k}:${n}`, at(ss), `study-now-${k}-${n}`, `今は『${it.title}』です。`, `頑張りましょう。（${n + 1}/${N}セット目）`);
             // 3) 休憩：1回分(25分)が終わった時。タップで◯×を記録
-            if (P.brk && ss + 25 <= e.endMins) add(`brk:${k}:${n}`, at(ss + 25), `study-break-${k}-${n}`, 'お疲れ様です（休憩中）', `${n + 1}セット目はできましたか？5分休憩。タップして◯か×を付けましょう`);
+            if (P.brk && ss + 25 <= e.endMins) add(`brk:${k}:${n}`, at(ss + 25), `study-break-${k}-${n}`, 'お疲れ様です。', '休憩を取りましょう。');
           }
         }
       } else if (isBrk(it) && P.brk) {
-        const afterStudy = prev && prev.item.kind === 'study';
-        add(`brk:${k}`, at(e.startMins), `${afterStudy ? 'study-break-' : 'study-rest-'}${k}`, 'お疲れ様です（休憩中）',
-          afterStudy ? `「${prev.item.title}」はできましたか？タップして◯か×を付けましょう` : 'しっかり休みましょう');
+        add(`brk:${k}`, at(e.startMins), `study-break-${k}`, 'お疲れ様です。', '休憩を取りましょう。');
       }
-      // 4) 次の項目（終わる3分前に予告）
-      if (P.next && nx && nx.startMins - lead > e.startMins) add(`next:${k}`, at(nx.startMins - lead), `study-next-${k}`, `次は${nx.item.title}です`, `${formatTime(nx.startMins)}から始まります（${lead}分前）`);
+      // 4) 事前通知：次に始まる項目名と、開始までの残り時間を知らせる
+      if (P.next && nx && nx.startMins - lead > e.startMins) add(`next:${k}`, at(nx.startMins - lead), `study-next-${k}`, `次は『${nx.item.title}』です。`, `${lead}分後に始まります。`);
     });
     // 5) 1日の最後だけ「お疲れ様でした」
     const last = entries[entries.length - 1];
-    if (P.end && last) add(`end:${day}:${dk}`, at(last.endMins), `study-end-${day}-${dk}`, 'お疲れ様でした', '今日の予定はすべて終わりです。ゆっくり休んでください');
+    if (P.end && last) add(`end:${day}:${dk}`, at(last.endMins), `study-end-${day}-${dk}`, 'お疲れ様でした。', '記録をして結果を見ましょう。');
     // 6) 遅れがあるとき（同じ1時間に1回まで）
     let late = false; try { late = !!evaluateUnifiedDiagnosis(); } catch (_) {}
     if (P.late && late) out.push({ id: `late:${dk}:${Math.floor(now / 3600000)}`, t: now + 120000, tag: `study-late-${dk}`, title: '遅れがあります', body: '時間割を修正しましょう' });
@@ -15885,6 +15911,7 @@ window.__structSig = function (list, withTime) {
       g('pm-ok').parentNode.style.display = S.rec ? 'none' : 'flex';
     }
   }
+  window.__refreshPomodoro = function () { cacheAt = 0; tick(); };
   function mark(ok) {
     if (!S || S.mode !== 'break' || S.rec) return;
     const it = (S.chk || S.e).item;
@@ -15950,9 +15977,9 @@ window.__structSig = function (list, withTime) {
   const ROWS = [
     ['wake', '起床の通知', '1日1回だけ。起きた時間をまだ入力していないときに、予定の起床時刻に知らせます'],
     ['now', '今の項目の通知', '各勉強の開始時に「今は〇〇です」'],
-    ['next', '次の項目の通知', '次の項目が始まる少し前に「次は〇〇です」'],
+    ['next', '事前通知', '次の項目が始まる前に「次は『〇〇』です」と知らせます'],
     ['brk', '休憩の通知（◯×記録）', '休憩の開始時。タップで直前の勉強に◯×を付けられます'],
-    ['end', '終了の通知', '1日の最後にだけ「お疲れ様でした」'],
+    ['end', '終了の通知', '1日の最後に「お疲れ様でした。記録をして結果を見ましょう。」と知らせます'],
     ['late', '遅れの通知', '遅れがあるとき「時間割を修正しましょう」（1時間に1回まで）']
   ];
   function sw(id, on, dis) { return `<button type="button" role="switch" aria-checked="${on}"${dis ? ' disabled' : ''} data-k="${id}" style="flex:none;width:52px;height:30px;border-radius:15px;border:0;position:relative;background:${on ? '#059669' : '#9aa5b5'}"><span style="position:absolute;top:3px;left:${on ? 25 : 3}px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .15s"></span></button>`; }
