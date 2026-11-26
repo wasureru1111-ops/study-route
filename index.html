@@ -15642,7 +15642,10 @@ window.__structSig = function (list, withTime) {
     if (button) button.textContent = config.enabled ? '通知の設定（オン）' : '通知の設定（オフ）';
   }
   function showSystemNotification(title, body, tag, force) {
-    if (window.__pushActive && !force) return;   // Web Pushが予約済みなら二重通知しない
+    // サーバー通知（Web Push）が使える端末では、確認が終わる前（起動直後）も含めて、アプリ側からは出さない。
+    // サーバー通知に失敗した時（__pushActive === false）と、使えない端末だけ、アプリ側で出す。
+    const pushCapable = !!(window.PUSH_CONFIG && window.PUSH_CONFIG.api && 'serviceWorker' in navigator && 'PushManager' in window && /^https?:$/.test(location.protocol));
+    if (!force && (window.__pushActive || (pushCapable && window.__pushActive !== false))) return;
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     const options = { body, tag, renotify: false, icon: './icon-192.png', badge: './icon-192.png' };
     try {
@@ -15720,7 +15723,7 @@ window.__structSig = function (list, withTime) {
         for (let n = 0; n < it.sets; n++) {
           const breakAt = e.startMins + 30 * n + 25;
           const breakKey = `pomo-break:${itemKey(day, date, it)}:${n}`;
-          if (e.startMins + 30 * n >= e.endMins || breakAt > e.endMins) break;
+          if (e.startMins + 30 * n >= e.endMins || breakAt >= e.endMins) break;   // 項目の終わりと同時＝次の項目が始まるので休憩通知は出さない
           if (now === breakAt && !sentLocal.has(breakKey)) {
             sentLocal.add(breakKey);
             showSystemNotification('お疲れ様です。', '25分間の勉強が終わりました。休憩を取りましょう。', `study-break-${breakKey}`);
@@ -15848,7 +15851,7 @@ window.__structSig = function (list, withTime) {
             // 2) 今の項目：各セットの開始（25分集中）
             if (P.now) add(`now:${k}:${n}`, at(ss), `study-now-${k}-${n}`, `今は『${it.title}』です。`, `頑張りましょう。（${n + 1}/${N}セット目）`);
             // 3) 休憩：1回分(25分)が終わった時。タップで◯×を記録
-            if (P.brk && ss + 25 <= e.endMins) add(`brk:${k}:${n}`, at(ss + 25), `study-break-${k}-${n}`, 'お疲れ様です。', '休憩を取りましょう。');
+            if (P.brk && ss + 25 < e.endMins) add(`brk:${k}:${n}`, at(ss + 25), `study-break-${k}-${n}`, 'お疲れ様です。', '休憩を取りましょう。');
           }
         }
       } else if (isBrk(it) && P.brk) {
