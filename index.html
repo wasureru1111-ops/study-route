@@ -8478,9 +8478,9 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
   <span class="sc-badge"></span>
 </div>
 
-<div id="sc-save-sheet" role="dialog" aria-modal="true" aria-label="スマホに保存">
+<div id="sc-save-sheet" role="dialog" aria-modal="true" aria-label="設定">
   <div class="sc-card">
-    <h3>スマホに保存</h3>
+    <h3>設定</h3>
     <p class="sc-note" id="sc-save-status">時間割・記録はこの端末に自動で保存されています。</p>
     <button type="button" class="sc-btn primary" id="sc-btn-install">ホーム画面に追加（アプリとして保存）</button>
     <button type="button" class="sc-btn" id="sc-btn-notify">通知の設定</button>
@@ -8520,7 +8520,7 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
     redo: svg(`<path d="M15 14l5-5-5-5M20 9H9.5a5.5 5.5 0 0 0 0 11H13" ${S}/>`),
     check: svg(`<path d="M5 12.5L10 17.5L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`),
     discard: svg(`<path d="M5 7h14M10 7V4.5h4V7M7 7l1 12.5h8L17 7M10.5 11v5M13.5 11v5" ${S}/>`),
-    save: svg(`<rect x="7" y="2.5" width="10" height="19" rx="2.5" ${S}/><path d="M12 8v6M9.5 11.5L12 14l2.5-2.5" ${S}/>`)
+    save: svg(`<circle cx="12" cy="12" r="3.2" fill="currentColor" fill-opacity=".22" ${S}/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" ${S}/>`)
   };
 
   const NORMAL_ITEMS = [
@@ -8533,7 +8533,7 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
     { id: 'random',   label: '全部シャッフル',   color: '#10b981', icon: () => ICON.random,   run: () => fullRandomShuffle() },
     { id: 'result',   label: '今日の振り返り', color: '#0284c7', icon: () => ICON.result,   run: () => openResultModal() },
     { id: 'reset',    label: 'リセット',       color: '#f43f5e', icon: () => ICON.reset,    run: () => openResetModal() },
-    { id: 'save',     label: 'スマホに保存',   color: '#22c55e', icon: () => ICON.save,     run: () => openSaveSheet() }
+    { id: 'save',     label: '設定',           color: '#64748b', icon: () => ICON.save,     run: () => openSaveSheet() }
   ];
   // 手動編集中は、ボタンがこの5つに変わる
   const EDIT_ITEMS = [
@@ -15603,6 +15603,7 @@ window.__structSig = function (list, withTime) {
   function send(entry, key) {
     if (window.__pushActive) return;   // サーバーからのプッシュ通知が有効なときは二重に鳴らさない
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    try { if (JSON.parse(localStorage.getItem('study_tracker_notify_prefs_v1') || '{}').now === false) return; } catch (_) {}   // 「今の項目の通知」がオフなら鳴らさない
     try {
       new Notification(`次は${entry.item.title}です。頑張りましょう`, {
         body: `${formatTime(entry.startMins)}からの予定です`,
@@ -15613,6 +15614,7 @@ window.__structSig = function (list, withTime) {
   }
   window.notifyStudyCompletion = function () {
     if (!config.enabled || !('Notification' in window) || Notification.permission !== 'granted') return;
+    try { if (JSON.parse(localStorage.getItem('study_tracker_notify_prefs_v1') || '{}').end === false) return; } catch (_) {}   // 「終了の通知」がオフなら鳴らさない
     const today = `${dateKey()}:${appState.activeDay}`;
     if (config.completionKey === today) return;
     config.completionKey = today; write();
@@ -15710,6 +15712,13 @@ window.__structSig = function (list, withTime) {
   const pad = (n) => String(n).padStart(2, '0');
   function logicalToday() { const d = new Date(); if (d.getHours() < 6) d.setDate(d.getDate() - 1); d.setHours(0, 0, 0, 0); return d; }
 
+  // 今日の「起きた時間」をもう入力したか（入力済みなら起床の通知は出さない）
+  function wakeEntered() {
+    try {
+      const r = JSON.parse(localStorage.getItem('study_tracker_dayrun_v1') || 'null');
+      return !!(r && r.date === getTodayDateKey() && Number.isFinite(r.wakeActual));
+    } catch (_) { return false; }
+  }
   function buildEvents() {
     const base = logicalToday();
     const dk = `${base.getFullYear()}-${pad(base.getMonth() + 1)}-${pad(base.getDate())}`;
@@ -15719,10 +15728,11 @@ window.__structSig = function (list, withTime) {
     const isBrk = (it) => /^break/.test(it.kind || '');
     let P = { wake: true, now: true, next: true, nextLead: 3, brk: true, end: true, late: true };
     try { Object.assign(P, JSON.parse(localStorage.getItem('study_tracker_notify_prefs_v1') || '{}')); } catch (_) {}
+    const lead = Math.max(1, Math.min(30, Number(P.nextLead) || 3));   // 「次の項目」を何分前に知らせるか
     const out = [];
     const add = (key, t, tag, title, body) => { if (t > now + 15000) out.push({ id: key + '@' + t, t, tag, title, body }); };
-    // 1) 起床：設定した起床時刻
-    if (P.wake) add(`wake:${day}:${dk}`, at(wakeMinsFor(day)), `study-wake-${day}-${dk}`, 'おはようございます', '起きた時間を入力して勉強をしましょう');
+    // 1) 起床：1日1回だけ。今日の「起きた時間」をまだ入力していないときだけ、予定の起床時刻に知らせる
+    if (P.wake && !wakeEntered()) add(`wake:${day}:${dk}`, at(wakeMinsFor(day)), `study-wake-${day}-${dk}`, 'おはようございます', '起きた時間を入力して勉強をしましょう');
     entries.forEach((e, i) => {
       const it = e.item, k = `${day}:${dk}:${it.id}`, prev = entries[i - 1], nx = entries[i + 1];
       if (it.kind === 'study') {
@@ -15744,7 +15754,7 @@ window.__structSig = function (list, withTime) {
           afterStudy ? `「${prev.item.title}」はできましたか？タップして◯か×を付けましょう` : 'しっかり休みましょう');
       }
       // 4) 次の項目（終わる3分前に予告）
-      if (P.next && nx && e.endMins - P.nextLead > e.startMins) add(`next:${k}`, at(e.endMins - P.nextLead), `study-next-${k}`, `次は${nx.item.title}です`, `${formatTime(nx.startMins)}から始まります`);
+      if (P.next && nx && nx.startMins - lead > e.startMins) add(`next:${k}`, at(nx.startMins - lead), `study-next-${k}`, `次は${nx.item.title}です`, `${formatTime(nx.startMins)}から始まります（${lead}分前）`);
     });
     // 5) 1日の最後だけ「お疲れ様でした」
     const last = entries[entries.length - 1];
@@ -15752,6 +15762,8 @@ window.__structSig = function (list, withTime) {
     // 6) 遅れがあるとき（同じ1時間に1回まで）
     let late = false; try { late = !!evaluateUnifiedDiagnosis(); } catch (_) {}
     if (P.late && late) out.push({ id: `late:${dk}:${Math.floor(now / 3600000)}`, t: now + 120000, tag: `study-late-${dk}`, title: '遅れがあります', body: '時間割を修正しましょう' });
+    const ta = window.__pushTestAt;   // 設定画面の「テスト通知」
+    if (ta && ta > now + 15000) out.push({ id: 'test:' + ta, t: ta, tag: 'study-test', title: 'テスト通知', body: 'アプリを閉じていても通知が届いています' });
     return out.sort((x, y) => x.t - y.t).slice(0, 78);
   }
 
@@ -15779,6 +15791,7 @@ window.__structSig = function (list, withTime) {
   }
   const soon = (ms) => { clearTimeout(syncTimer); syncTimer = setTimeout(() => syncNow(false), ms || 2500); };
   window.__pushSync = () => syncNow(true);
+  window.__pushTest = async () => { window.__pushTestAt = Date.now() + 25000; await syncNow(true); return !!window.__pushActive; };
 
   // 通知ボタン（有効化／停止）に連動
   const orig = window.enableStudyNotifications;
@@ -15887,6 +15900,46 @@ window.__structSig = function (list, withTime) {
 </script>
 
 <script>
+/* 修正案の無限ループ防止：同じ修正案を同じ日に2回適用しても直らない場合は、それ以上自動では出さない */
+(function () {
+  const KEY = 'study_tracker_fixloop_v1', MAX = 2, MAX_CLICKS = 5; let told = '';
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (_) { return {}; } };
+  const save = (h) => { try { localStorage.setItem(KEY, JSON.stringify(h)); } catch (_) {} };
+  const keyOf = (sig) => { let d = ''; try { d = getTodayDateKey(); } catch (_) {} return d + '|' + (appState.activeDay || '') + '|' + sig; };
+  const origEval = window.evaluateUnifiedDiagnosis, origInner = window.runAutoFixSequenceInner;
+  if (typeof origEval !== 'function' || typeof origInner !== 'function') return;
+  window.evaluateUnifiedDiagnosis = function () {
+    const r = origEval.apply(this, arguments);
+    try {
+      if (!r || !r.proposal || !r.proposal.fixSig || window.__manualProposal) return r;
+      const h = load(), clicks = h[keyOf('#clicks')] || 0;
+      if ((h[keyOf(r.proposal.fixSig)] || 0) >= MAX || clicks >= MAX_CLICKS) {   // 何度適用しても直らない修正案は出さない
+        const t = keyOf('#told'); if (told !== t) { told = t; try { showToast('同じ修正が繰り返されたため、今日はこれ以上の自動の修正案を止めました（「修正案」ボタンからは実行できます）', 'dark'); } catch (_) {} }
+        return null;
+      }
+    } catch (_) {}
+    return r;
+  };
+  const origRun = window.runAutoFixSequence;
+  if (typeof origRun === 'function') window.runAutoFixSequence = function () {
+    try { const h = load(), k = keyOf('#clicks'); h[k] = (h[k] || 0) + 1; const d = k.slice(0, 10), keep = {}; Object.keys(h).forEach(x => { if (x.slice(0, 10) === d) keep[x] = h[x]; }); save(keep); } catch (_) {}
+    return origRun.apply(this, arguments);
+  };
+  window.runAutoFixSequenceInner = function () {
+    try {
+      const r = origEval();
+      if (r && r.proposal && r.proposal.fixSig) {
+        const h = load(), k = keyOf(r.proposal.fixSig); h[k] = (h[k] || 0) + 1;
+        const t = Date.now(), keep = {}; Object.keys(h).forEach(x => { if (x.slice(0, 10) === k.slice(0, 10)) keep[x] = h[x]; });   // 古い日の記録は捨てる
+        save(keep);
+      }
+    } catch (_) {}
+    return origInner.apply(this, arguments);
+  };
+})();
+</script>
+
+<script>
 /* 通知の詳しい設定ページ（通知ボタンから開く） */
 (function () {
   const PK = 'study_tracker_notify_prefs_v1', EK = 'study_tracker_schedule_notifications_v1';
@@ -15895,29 +15948,40 @@ window.__structSig = function (list, withTime) {
   const save = (p) => { try { localStorage.setItem(PK, JSON.stringify(p)); } catch (_) {} try { if (window.__pushSync) window.__pushSync(); } catch (_) {} };
   const isOn = () => { try { return !!JSON.parse(localStorage.getItem(EK) || '{}').enabled; } catch (_) { return false; } };
   const ROWS = [
-    ['wake', '起床の通知', '起床時刻に「起きた時間を入力して勉強をしましょう」'],
+    ['wake', '起床の通知', '1日1回だけ。起きた時間をまだ入力していないときに、予定の起床時刻に知らせます'],
     ['now', '今の項目の通知', '各勉強の開始時に「今は〇〇です」'],
-    ['next', '次の項目の通知', '項目が終わる少し前に「次は〇〇です」'],
+    ['next', '次の項目の通知', '次の項目が始まる少し前に「次は〇〇です」'],
     ['brk', '休憩の通知（◯×記録）', '休憩の開始時。タップで直前の勉強に◯×を付けられます'],
     ['end', '終了の通知', '1日の最後にだけ「お疲れ様でした」'],
     ['late', '遅れの通知', '遅れがあるとき「時間割を修正しましょう」（1時間に1回まで）']
   ];
-  function sw(id, on) { return `<button type="button" role="switch" aria-checked="${on}" data-k="${id}" style="flex:none;width:52px;height:30px;border-radius:15px;border:0;position:relative;background:${on ? '#059669' : '#9aa5b5'}"><span style="position:absolute;top:3px;left:${on ? 25 : 3}px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .15s"></span></button>`; }
+  function sw(id, on, dis) { return `<button type="button" role="switch" aria-checked="${on}"${dis ? ' disabled' : ''} data-k="${id}" style="flex:none;width:52px;height:30px;border-radius:15px;border:0;position:relative;background:${on ? '#059669' : '#9aa5b5'}"><span style="position:absolute;top:3px;left:${on ? 25 : 3}px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .15s"></span></button>`; }
   function render(root) {
     const p = load(), on = isOn();
-    const row = (a, b, c) => `<div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid rgba(127,127,127,.25)"><div style="flex:1;min-width:0"><div style="font-weight:800;font-size:16px">${a}</div><div style="font-size:13px;opacity:.7;line-height:1.5">${b}</div></div>${c}</div>`;
+    const row = (a, b, c, extra) => `<div style="padding:14px 0;border-bottom:1px solid rgba(127,127,127,.25)"><div style="display:flex;align-items:center;gap:12px"><div style="flex:1;min-width:0"><div style="font-weight:800;font-size:16px">${a}</div><div style="font-size:13px;opacity:.7;line-height:1.5">${b}</div></div>${c}</div>${extra || ''}</div>`;
+    const leadSel = `<div style="display:flex;align-items:center;gap:10px;margin-top:10px"><span style="font-size:14px;font-weight:700">何分前に知らせるか</span><select id="ns-lead" style="font-size:16px;padding:6px 8px;border-radius:8px">${[1, 2, 3, 5, 10, 15].map(n => `<option value="${n}"${Number(p.nextLead) === n ? ' selected' : ''}>${n}分前</option>`).join('')}</select></div>`;
+    // スマホ通知がオフのあいだは、詳細の通知もすべてオフ（切り替えられない）。保存した設定はそのまま残り、オンに戻すと復元されます
+    const detail = ROWS.map(r => row(r[1], r[2], sw(r[0], on && !!p[r[0]], !on), (r[0] === 'next' && on && p.next) ? leadSel : '')).join('');
     root.querySelector('#ns-body').innerHTML =
-      row('スマホ通知', on ? 'オン（アプリを閉じていても届きます）' : 'オフ。オンにすると、通知の許可を聞かれます', sw('master', on)) +
-      `<div style="font-size:13px;font-weight:800;opacity:.7;margin:20px 0 0">通知の種類</div>` +
-      ROWS.map(r => row(r[1], r[2], sw(r[0], !!p[r[0]]))).join('') +
-      row('次の項目の予告', '何分前に知らせるか', `<select id="ns-lead" style="font-size:16px;padding:6px 8px;border-radius:8px">${[1, 3, 5, 10].map(n => `<option value="${n}"${p.nextLead === n ? ' selected' : ''}>${n}分前</option>`).join('')}</select>`) +
+      row('スマホ通知', on ? 'オン（アプリを閉じていても届きます）' : 'オフ。すべての通知が届きません。オンにすると、通知の許可を聞かれます', sw('master', on)) +
+      `<div style="font-size:13px;font-weight:800;opacity:.7;margin:20px 0 0">通知の種類${on ? '' : '（スマホ通知がオフのため、すべてオフ）'}</div>` +
+      `<div style="${on ? '' : 'opacity:.4'}">${detail}</div>` +
+      (on ? row('テスト通知', 'ボタンを押したあとアプリを閉じて待つと、最大2分以内に届きます', '<button type="button" id="ns-test" style="flex:none;font-size:15px;font-weight:800;color:#fff;background:#4f46e5;border:0;border-radius:10px;padding:8px 14px">送る</button>') : '') +
       `<div style="font-size:12px;opacity:.65;line-height:1.6;margin-top:14px">変更はすぐ反映されます。通知を届けるため、1日に1回はアプリを開いてください。</div>`;
     root.querySelectorAll('button[data-k]').forEach(b => b.onclick = async () => {
       const k = b.dataset.k;
       if (k === 'master') { try { await window.enableStudyNotifications(); } catch (_) {} render(root); return; }
+      if (!isOn()) return;
       const q = load(); q[k] = !q[k]; save(q); render(root);
     });
     const sel = root.querySelector('#ns-lead'); if (sel) sel.onchange = () => { const q = load(); q.nextLead = +sel.value; save(q); };
+    const tb = root.querySelector('#ns-test');
+    if (tb) tb.onclick = async () => {
+      tb.disabled = true; tb.textContent = '準備中…';
+      let ok = false; try { ok = await window.__pushTest(); } catch (_) {}
+      tb.disabled = false; tb.textContent = '送る';
+      try { showToast(ok ? 'アプリを閉じて待ってください。最大2分以内に届きます' : '通知サーバーに接続できませんでした', ok ? 'emerald' : 'rose'); } catch (_) {}
+    };
   }
   window.openNotifySettings = function () {
     const old = document.getElementById('notify-settings'); if (old) old.remove();
