@@ -225,26 +225,26 @@ window.__recMins=function(it,mins){
     }
 
     .track-selected {
-      box-shadow: 0 0 0 3px #F59E0B, 0 14px 28px -8px rgba(245, 158, 11, 0.35) !important;
+      box-shadow: 0 0 0 3px #F59E0B !important;
       border-color: #F59E0B !important;
-      background-color: #FFFBEB !important;
+      background-color: #FDE68A !important;
       filter: none !important;
       transition: background-color 0.28s ease, border-color 0.28s ease, box-shadow 0.28s ease;
     }
     html.dark .track-selected {
-      background-color: #2A2010 !important;
+      background-color: #4A3508 !important;
       border-color: #FBBF24 !important;
     }
 
     .track-moving {
-      box-shadow: 0 0 0 3px #4F46E5, 0 24px 44px -10px rgba(79, 70, 229, 0.45) !important;
+      box-shadow: 0 0 0 4px #4F46E5 !important;
       border-color: #4F46E5 !important;
-      background-color: #EEF2FF !important;
+      background-color: #C7D2FE !important;
       filter: none !important;
     }
     html.dark .track-moving {
-      background-color: #1A213B !important;
-      border-color: #818CF8 !important;
+      background-color: #343F8F !important;
+      border-color: #A5B4FC !important;
     }
 
     /* カード内の文字：イラストっぽい（手描き風ポップ）書体 */
@@ -1006,7 +1006,7 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
             </button>
             <button type="button" id="btn-ratio-settings" onclick="openRatioGauge()"
               class="tap-spring inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-extrabold bg-pri-50 hover:bg-pri-100 dark:bg-pri-950 dark:hover:bg-pri-900 text-pri-950 dark:text-pri-200 border border-pri-200 dark:border-pri-800"
-              aria-label="理数系と英語の配分を設定">
+              aria-label="理系科目と文系科目の配分を設定">
               <span>教科の配分</span>
             </button>
           </div>
@@ -1510,7 +1510,7 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
     };
 
     // セット数制限：1項目につき2〜4セットまで（rulesのみ最低3セット、未満時は自動削除）
-    // 科目の重みは利用者が変更でき、端末の localStorage に保存する（rules は3セット固定だが、比率では英語として数える）。
+    // 科目の重みは利用者が変更でき、端末の localStorage に保存する（rules は3セット固定だが、比率では文系科目として数える）。
     const SUBJECT_WEIGHT_KEY = 'study_tracker_subject_weights_v1';
     const SUBJECT_WEIGHT_DEFAULTS = { m3c: 10, m1a: 9, phys: 8, m2b: 6, kaishaku: 4, polaris: 3, vintage: 3 };
     const SUBJECT_WEIGHT_ROWS = [
@@ -1544,13 +1544,13 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
       { key: 'm1a',      label: '数Ⅰ・A', score: 90, test: (t) => t.includes('数ⅰ') || t.includes('数1') },
       { key: 'phys',     label: '物理',   score: 80, test: (t, it) => it.category === 'physics' || t.includes('物理') },
       { key: 'm2b',      label: '数Ⅱ・B', score: 60, test: (t) => t.includes('数ⅱ') || t.includes('数2') },
-      // 英語
+      // 文系科目
       { key: 'rules',    label: 'rules',  score: 40, test: (t) => t.includes('rules') },
       { key: 'kaishaku', label: '解釈',   score: 40, test: (t) => t.includes('解釈') },
       { key: 'vintage',  label: 'Vintage', score: 30, test: (t) => t.includes('vintage') },
       { key: 'polaris',  label: 'ポラリス', score: 30, test: (t) => t.includes('ポラリス') }
     ];
-    // ★ 英語の1日あたりのセット数（手動編集の修正案で使う。ユーザー指定・変更しない）
+    // ★ 文系科目の1日あたりのセット数（手動編集の修正案で使う。ユーザー指定・変更しない）
     //   rules=3 ／ 解釈=4まで ／ ポラリス=2まで ／ Vintage=4まで（記録のある枠のセットも数える）
     const SUBJECT_DAILY_LIMIT = { rules: 3, kaishaku: 4, polaris: 2, vintage: 4 };
     const PRIORITY_TEXT = '数ⅢC ≧ 数Ⅰ・A ≧ 物理 ＞ 数Ⅱ・B ＞ rules(最低3セット) ＞ 解釈 ＞ Vintage ＞ ポラリス';
@@ -1903,8 +1903,8 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
       const wiped = stem.some(k => (totBy[k] || 0) >= 2 && !(doneBy[k] > 0));
       return (total >= 2 && (done / total <= 0.5 || wiped)) || (anyStudy && !anyStem);   // 1日に優先度の高い項目が1つもない時も
     }
-    // 英語も同じ基準で判定し、片方だけ遅れている時に「おまかせ」の目標を調整する。
-    // rules は固定3セットで達成状況の判定からは除外するが、比率配分では英語として数える。
+    // 文系科目も同じ基準で判定し、片方だけ遅れている時に「おまかせ」の目標を調整する。
+    // rules は固定3セットで達成状況の判定からは除外するが、比率配分では文系科目として数える。
     function isEnglishWeakSoFar() {
       const { entries } = recalcTimeline();
       const english = ['kaishaku', 'polaris', 'vintage'];
@@ -2010,9 +2010,9 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
         { id, kind: 'study', title, note, category, zone, sets, done: 0, missed: 0, completed: false, deltaMins: 0, baseMins: mins, plannedMins: mins, adjustedNote: '' }, extra || {});
       const brk = (id, kind, title, note, mins) => ({ id, kind, title, note, deltaMins: 0, baseMins: mins, plannedMins: mins, adjustedNote: '' });
       return {
-        // ■ 設計ルール（固定枠と23:00終了を先にロック → 17時までは重い理数 → 17時以降は英語・復習）
+        // ■ 設計ルール（固定枠と23:00終了を先にロック → 17時までは重い理系 → 17時以降は文系科目・復習）
         // 通常日：計25セット（数3C 3+2＋夜復習2＝7／数1A 2+2＝4／物理3／数2B 2／rules3／解釈2／ポラリス2／Vintage2）。6:00〜23:00 ちょうど
-        // 6:00〜17:00 は重い理数だけ（物理→数3C→数1A→昼食→数2B→数1A→数3C）。17:00〜23:00 は英語＋数3Cの解き直し
+        // 6:00〜17:00 は重い理系だけ（物理→数3C→数1A→昼食→数2B→数1A→数3C）。17:00〜23:00 は文系科目＋数3Cの解き直し
         normal: [
           st('n1', '暗記 or うんち', '朝の頭起こし・単語確認', 'routine', 'morning_fixed', 0, 110),
           rest('nr1', 10),
@@ -2025,7 +2025,7 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
           st('n5b', '数Ⅰ・A', '昼後は素早く解く演習', 'math', 'mid_day', 2, 60),
           brk('n10', 'break_red', '休憩 20分', '軽食・ストレッチ', 20),
           st('n8', '数ⅢC', '17時までに計算演習をもう一周', 'math', 'stem_day', 2, 60),
-          // ── 17:00〜 英語・復習 ──
+          // ── 17:00〜 文系科目・復習 ──
           st('n12', 'rules', '英語長文演習', 'english', 'mid_day', 3, 90),
           brk('n13', 'break_red', '休憩 20分', '軽食・夕食', 20),
           st('n11', '解釈', '英文和訳演習', 'english', 'mid_day', 2, 60),
@@ -2036,7 +2036,7 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
         ],
 
         // 固定：黒本 8:00〜 / 解き直し / 予習 14:20〜15:00 / 受講 15:00〜20:00。
-        // 空き（10:50〜13:20）に重い理数（数3C・数1A）。20:20〜23:00 は英語（rules）＋物理の復習
+        // 空き（10:50〜13:20）に重い理系（数3C・数1A）。20:20〜23:00 は文系科目（rules）＋物理の復習
         wed_thu: [
           st('w1', '暗記 or うんち', '朝の頭起こし・単語確認', 'routine', 'morning_fixed', 0, 110),
           rest('wr1', 10),
@@ -2049,14 +2049,14 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
           st('w5c', '予習', '授業の予習', 'exam', 'mid_day', 0, 40),
           st('w7', '受講', '授業受講', 'exam', 'mid_day', 3, 300),
           brk('w8', 'break_red', '休憩 20分', '軽食・切り替え', 20),
-          // ── 20:20〜 英語・復習 ──
+          // ── 20:20〜 文系科目・復習 ──
           st('w12', 'rules', '英語長文演習', 'english', 'mid_day', 3, 90),
           rest('wr3', 10),
           st('w9', '物理', '基礎確認・解き直し', 'physics', 'night_light', 2, 60, { isReviewOnlyNight: true })
         ],
 
         // 固定：過去問 8:00〜13:00 / 解き直し 14:00〜15:50 / 塾 16:00〜20:00。
-        // 17時前の空きはなく、20:20〜23:00 は英語（rules）＋数3Cの解き直し
+        // 17時前の空きはなく、20:20〜23:00 は文系科目（rules）＋数3Cの解き直し
         fri: [
           st('f1', '暗記 or うんち', '朝の頭起こし・単語確認', 'routine', 'morning_fixed', 0, 110),
           rest('fr1', 10),
@@ -2066,7 +2066,7 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
           rest('fr2', 10),
           st('f5', '塾', '授業・自習', 'exam', 'mid_day', 0, 240),
           brk('f6', 'break_red', '休憩 20分', '軽食・切り替え', 20),
-          // ── 20:20〜 英語・復習 ──
+          // ── 20:20〜 文系科目・復習 ──
           st('f9', 'rules', '英語長文演習', 'english', 'mid_day', 3, 90),
           rest('fr3', 10),
           st('f8', '数ⅢC', '間違えた計算の解き直し', 'math', 'night_light', 2, 60, { isReviewOnlyNight: true })
@@ -2358,6 +2358,7 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
     }
 
     function sanitizeItem(item) {
+      if (item && item.note === '文系科目の長文演習') item.note = '英語長文演習';
       const deltaMins = Number.isFinite(item.deltaMins) ? item.deltaMins : 0;
       const baseMins = Math.max(5, item.baseMins || (item.kind === 'study' ? 30 : 20));
       const plannedMins = Math.max(5, item.plannedMins || baseMins);
@@ -3170,7 +3171,7 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
       return idx !== -1 && entries[idx].isPast && idx <= cur - 2;
     }
 
-    // 理数系：英語の割合（修正案ボタンの長押しで設定。おまかせ＝状況に合わせて自動）
+    // 理系科目：文系科目の割合（修正案ボタンの長押しで設定。おまかせ＝状況に合わせて自動）
     const STEM_RATIO_KEY = 'study_tracker_stem_ratio_v1';
     function getStemRatioSetting() {
       try {
@@ -3180,7 +3181,7 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
       return { auto: true, stem: 60 };
     }
     function setStemRatioSetting(v) { try {  __ls.set(STEM_RATIO_KEY, v === 'auto' ? 'auto' : String(Math.max(0, Math.min(100, Math.round(Number(v) / 10) * 10)))); } catch (_) {} }
-    // おまかせ：基本は理数6：英語4。理数が遅れていれば7：3、英語が遅れていれば5：5。
+    // おまかせ：基本は理系6：文系4。理系が遅れていれば7：3、文系科目が遅れていれば5：5。
     function automaticStemPercent() {
       let stemWeak = false, englishWeak = false;
       try { stemWeak = isStemWeakSoFar(); } catch (_) {}
@@ -3516,7 +3517,7 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
 
         // ---------------------------------------------------------
         // (5) 全未記入記入完了後の優先順位通りの全体修正案
-        //     優先順位：1位 数学（数3C→1a→2b）／2位 物理／3位 英語（rules→解釈→ポラリス→vintage）（SUBJECT_PRIORITY）
+        //     優先順位：1位 数学（数3C→1a→2b）／2位 物理／3位 文系科目（rules→解釈→ポラリス→vintage）（SUBJECT_PRIORITY）
         // ---------------------------------------------------------
         // 未達成ノルマ（×にした分＋時間切れで削った分）を、優先度の高い科目から順に回収する
         //   ① 同科目の残り枠を増枠 → ② 無ければ優先度の低い枠の前へ割り込み → ③ 時間が足りなければ下の(6)で低優先度から削減
@@ -3609,7 +3610,7 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
         };
 
         const NIGHT_HEAVY_LIMIT = 21 * 60; // 21:00以降には新規の重い科目を割り込ませない
-        // 割合を手動で決めている時：0割の側の科目は入れない（理数0なら英語だけ／英語0なら理数だけ）
+        // 割合を手動で決めている時：0割の側の科目は入れない（理系0なら文系科目だけ／文系科目0なら理系だけ）
         const __rc = getStemRatioSetting();
         const __zero = (!__rc.auto && __rc.stem === 0) ? 0 : ((!__rc.auto && __rc.stem === 100) ? 1 : -1);
         const __grp = (k) => ['m3c', 'm1a', 'm2b', 'phys'].includes(k) ? 0 : (['rules', 'kaishaku', 'vintage', 'polaris'].includes(k) ? 1 : -1);
@@ -3617,10 +3618,37 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
         const anchorEntries = entries.filter(e => !e.isPast && e.item.kind === 'study' && isFixedAnchorStudy(e.item));
         const minInsertIdx = anchorEntries.length ? Math.max(...anchorEntries.map(a => a.idx)) + 1 : 0; // 受講・塾の開始時刻は動かさない
 
-        const stemWeakNow = __rc.auto ? isStemWeakSoFar() : false;   // 割合を手動で決めた時は「理数優先」の自動判断をしない
+        const stemWeakNow = __rc.auto ? isStemWeakSoFar() : false;   // 割合を手動で決めた時は「理系優先」の自動判断をしない
+        // 目標の比率（理系科目：文系科目）から遠ざかる回収は入れない。いまの予定（修正案で足した分も含む）で割合を見る。
+        const __rcTarget = effectiveStemPercent() / 100;
+        const __rcById = new Map(entries.map(e => [e.item.id, e]));
+        const __rcRemain = (it) => {
+          const e = __rcById.get(it.id);
+          if (!e || e.isFuture) return it.sets || 0;
+          if (e.isCurrentActive) return (e.done || 0) + (e.missed || 0) === 0 ? (it.sets || 0) : 0;
+          return 0;
+        };
+        const __rcCounts = () => {
+          let s = 0, g = 0;
+          buildProjectedList({ withRest: false }).list.forEach(it => {
+            if (it.kind !== 'study' || !(it.sets > 0)) return;
+            const k = getSubjectKey(it), n = __rcRemain(it);
+            if (['m3c', 'm1a', 'm2b', 'phys'].includes(k)) s += n; else if (['rules', 'kaishaku', 'vintage', 'polaris'].includes(k)) g += n;
+          });
+          return { s, g };
+        };
+        const __rcFarther = (subjKey, addN) => {
+          const { s, g } = __rcCounts(), n = s + g;
+          if (n < 4 && __rcTarget > 0 && __rcTarget < 1) return false;
+          const isStem = ['m3c', 'm1a', 'm2b', 'phys'].includes(subjKey);
+          const cur = n ? s / n : __rcTarget, next = (s + (isStem ? addN : 0)) / (n + addN);
+          const dc = Math.abs(cur - __rcTarget), dn = Math.abs(next - __rcTarget);
+          return dn > dc && dn > 0.04;   // いまより比率から離れ、かつ4pt以上ずれるなら入れない
+        };
         for (const subj of RECOVERY_SUBJECTS) {
           if (__zero !== -1 && __grp(subj.key) === __zero) continue;
-          if (stemWeakNow && !['m3c', 'm1a', 'm2b', 'phys'].includes(subj.key)) continue; // 理数系が進んでいない時は英語を回収・追加しない
+          if (__rcFarther(subj.key, Math.min(2, Math.max(1, (deficitBySubject[subj.key] || 0) - (creditBySubject[subj.key] || 0))))) continue;   // 比率優先
+          if (stemWeakNow && !['m3c', 'm1a', 'm2b', 'phys'].includes(subj.key)) continue; // 理系科目が進んでいない時は文系科目を回収・追加しない
           let need = (deficitBySubject[subj.key] || 0) - (creditBySubject[subj.key] || 0);
           if (need <= 0) continue;
           const subjScore = getSubjectPriorityScore({ kind: 'study', title: subj.title, category: subj.category });
@@ -3694,7 +3722,7 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
         }
 
         // これからの学習枠を優先順位の高い順（数ⅢC → 数Ⅰ・A → 物理 → 数Ⅱ・B → rules → 解釈 → ポラリス → Vintage）に並べる。
-        // 英語は後ろへ。受講・塾・過去問などの固定枠はまたがない（各区間の中だけで並べ替え）
+        // 文系科目は後ろへ。受講・塾・過去問などの固定枠はまたがない（各区間の中だけで並べ替え）
         {
           const reorderable = (e) => e.isFuture && e.item.kind === 'study' && getSubjectKey(e.item) &&
             !isFixedFrameItem(e.item) &&
@@ -3765,9 +3793,9 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
         }
 
         // ---------------------------------------------------------
-        // (5c) 理数系の◯が少ない時の入れ替え（全滅した科目がある／半分以上やっていない時）
-        //      経過した元の時間割の理数系（数学・物理）で、全滅した科目がある／半分以上やっていなければ、
-        //      優先度の低い枠（rules・解釈・ポラリス・Vintage）を消して、同じ枠に優先度の高い理数系を入れる
+        // (5c) 理系科目の◯が少ない時の入れ替え（全滅した科目がある／半分以上やっていない時）
+        //      経過した元の時間割の理系科目（数学・物理）で、全滅した科目がある／半分以上やっていなければ、
+        //      優先度の低い枠（rules・解釈・ポラリス・Vintage）を消して、同じ枠に優先度の高い理系科目を入れる
         // ---------------------------------------------------------
         {
           const STEM_KEYS = ['m3c', 'm1a', 'm2b', 'phys'];
@@ -3790,7 +3818,7 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
           const dayHasStem = entries.some(e => e.item.kind === 'study' && STEM_KEYS.includes(getSubjectKey(e.item)));
           const noHigh = !dayHasStem && entries.some(e => e.item.kind === 'study' && e.item.zone !== 'morning_fixed');
           const weak = __rc.auto && ((stemTotal >= 2 && (stemDone / stemTotal <= 0.5 || wiped.length > 0)) || noHigh);
-          const severe = stemTotal >= 4 && stemDone / stemTotal < 0.2; // 2割未満：英語は全部外す
+          const severe = stemTotal >= 4 && stemDone / stemTotal < 0.2; // 2割未満：文系科目は全部外す
           if (weak) {
             const stemFutureSets = (list) => list.reduce((n, it) => n + (it.kind === 'study' && STEM_KEYS.includes(getSubjectKey(it)) ? (it.sets || 0) : 0), 0);
             const plannedAdded = Math.max(0, stemFutureSets(buildProjectedList({ withRest: false }).list) - stemFutureSets(appState.schedules[day]));
@@ -3815,22 +3843,22 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
               const subj = stemSubjs.find(sj => (addedBy[sj.key] || 0) < MAX_SETS_PER_ITEM);
               if (!subj) {
                 if (!severe) break;
-                // 入れ替え先の理数系が上限なら、英語はそのまま削除（空いた時間は理数系の穴埋めへ）
+                // 入れ替え先の理系科目が上限なら、文系科目はそのまま削除（空いた時間は理系科目の穴埋めへ）
                 registerStep(low, {
                   type: 'delete',
-                  actionLabel: `${it.title}を削除（理数系の◯が2割未満のため英語を外す）`,
+                  actionLabel: `${it.title}を削除（理系科目の◯が2割未満のため文系科目を外す）`,
                   adjustedNote: '',
                   editPatch: {},
                   mutateFn: () => {}
                 });
-                setPlan(it.id, { deleteReason: '理数系の◯が2割未満のため英語を外す' });
+                setPlan(it.id, { deleteReason: '理系科目の◯が2割未満のため文系科目を外す' });
                 continue;
               }
               let newId = `swap_${subj.key}_${it.id}`;
               let seq = 2;
               while (appState.schedules[day].some(x => x.id === newId) || planMap.has(newId)) { newId = `swap_${subj.key}_${it.id}_${seq++}`; }
               const newItem = {
-                id: newId, kind: 'study', title: subj.title, note: `理数系の◯が少ないため「${it.title}」から入れ替え`,
+                id: newId, kind: 'study', title: subj.title, note: `理系科目の◯が少ないため「${it.title}」から入れ替え`,
                 category: subj.category, zone: low.item.zone === 'night_light' ? 'night_light' : subj.zone, sets, done: 0, missed: 0, completed: false,
                 deltaMins: 0, baseMins: sets * perSet, plannedMins: sets * perSet, adjustedNote: '', recoveredSets: sets
               };
@@ -3839,8 +3867,8 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
                 type: 'insert_study',
                 destItemId: it.id,
                 moveDirection: 'before',
-                actionLabel: `${subj.title}を×${sets}で「${it.title}」の位置へ入れ替え（理数系の◯が少ないため）`,
-                adjustedNote: '修正: 理数系の◯が少ないため優先度の高い科目へ入れ替え',
+                actionLabel: `${subj.title}を×${sets}で「${it.title}」の位置へ入れ替え（理系科目の◯が少ないため）`,
+                adjustedNote: '修正: 理系科目の◯が少ないため優先度の高い科目へ入れ替え',
                 mutateFn: () => {}
               });
               const ins = planMap.get(newId);
@@ -3849,12 +3877,12 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
               ins.isSwap = true;
               registerStep(low, {
                 type: 'delete',
-                actionLabel: `${it.title}を削除（優先度が低く、理数系の◯が少ないため）`,
+                actionLabel: `${it.title}を削除（優先度が低く、理系科目の◯が少ないため）`,
                 adjustedNote: '',
                 editPatch: {},
                 mutateFn: () => {}
               });
-              setPlan(it.id, { deleteReason: '理数系の◯が少ないため優先度の低い枠を削除' });
+              setPlan(it.id, { deleteReason: '理系科目の◯が少ないため優先度の低い枠を削除' });
               addedBy[subj.key] = (addedBy[subj.key] || 0) + sets;
               budget -= sets;
               swapped++;
@@ -3896,9 +3924,9 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
 
         // ---------------------------------------------------------
         // (5c-2) 目標割合に合わせて、1日の総量が近づくよう未来の未着手枠を入れ替える。
-        //        「おまかせ」も自動判定した目標比率を使い、rules は英語グループとして数える。
+        //        「おまかせ」も自動判定した目標比率を使い、rules は文系科目グループとして数える。
         // ---------------------------------------------------------
-        {
+        const applyRatioBalance = () => {
           const rs = getStemRatioSetting();
           {
             const STEM_K2 = ['m3c', 'm1a', 'm2b', 'phys'], ENG_K2 = ['rules', 'kaishaku', 'vintage', 'polaris'];
@@ -3931,9 +3959,16 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
               let done = false;
               for (const low of cands) {
                 const it = low.item;
-                const moved = Math.max(1, Math.min(MAX_SETS_PER_ITEM, it.sets));
-                const newStem = toStem ? stem + moved : stem - moved;
-                if (Math.abs(newStem / (stem + eng) - target) >= Math.abs(share - target)) { used.add(it.id); continue; }   // 近づかない入れ替えはしない
+                const itSets = Math.max(1, it.sets || 1);
+                // 1枠まるごと入れ替えると行き過ぎる時は、目標にいちばん近づく分（1〜4セット）だけを入れ替える。rules は3セット固定なのでまるごとだけ。
+                let moved = 0, bestGap = Math.abs(share - target);
+                for (let m = 1; m <= Math.min(MAX_SETS_PER_ITEM, itSets); m++) {
+                  if (isRulesItem(it) && m !== itSets) continue;
+                  const gap = Math.abs((toStem ? stem + m : stem - m) / (stem + eng) - target);
+                  if (gap < bestGap - 1e-9) { bestGap = gap; moved = m; }
+                }
+                if (!moved) { used.add(it.id); continue; }   // 近づかない入れ替えはしない
+                const partial = moved < itSets;
                 const pool = RECOVERY_SUBJECTS.filter(sj => (toStem ? STEM_K2 : ENG_K2).includes(sj.key))
                   .filter(sj => toStem ? (c[sj.key] || 0) < (target >= 1 ? 14 : 8) : (c[sj.key] || 0) < (target <= 0 ? 14 : (SUBJECT_DAILY_LIMIT[sj.key] || 4)))
                   .sort((a, b) => ((c[a.key] || 0) / getSubjectPriorityScore({ kind: 'study', title: a.title, category: a.category })) - ((c[b.key] || 0) / getSubjectPriorityScore({ kind: 'study', title: b.title, category: b.category })));
@@ -3944,22 +3979,32 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
                 let seq = 2;
                 while (appState.schedules[day].some(x => x.id === newId) || planMap.has(newId)) { newId = `swap_${subj.key}_${it.id}_${seq++}`; }
                 const newItem = {
-                  id: newId, kind: 'study', title: subj.title, note: `理数${Math.round(target * 100)}：英語${100 - Math.round(target * 100)}の割合設定のため「${it.title}」から入れ替え`,
+                  id: newId, kind: 'study', title: subj.title, note: `理系${Math.round(target * 100)}：文系${100 - Math.round(target * 100)}の割合設定のため「${it.title}」から入れ替え`,
                   category: subj.category, zone: it.zone === 'night_light' ? 'night_light' : subj.zone, sets: moved, done: 0, missed: 0, completed: false,
                   deltaMins: 0, baseMins: moved * perSet, plannedMins: moved * perSet, adjustedNote: '', recoveredSets: moved
                 };
                 registerStep({ item: newItem, done: 0, missed: 0, startMins: low.startMins }, {
                   type: 'insert_study', destItemId: it.id, moveDirection: 'before',
-                  actionLabel: `${subj.title}を×${moved}で「${it.title}」の位置へ入れ替え（理数${Math.round(target * 100)}：英語${100 - Math.round(target * 100)}の割合のため）`,
-                  adjustedNote: '修正: 理数系と英語の割合に合わせて入れ替え', mutateFn: () => {}
+                  actionLabel: `${subj.title}を×${moved}で「${it.title}」の位置へ入れ替え（理系${Math.round(target * 100)}：文系${100 - Math.round(target * 100)}の割合のため）`,
+                  adjustedNote: '修正: 理系科目と文系科目の割合に合わせて入れ替え', mutateFn: () => {}
                 });
                 const ins = planMap.get(newId); if (!ins) continue; ins.newItem = newItem; ins.isSwap = true;
-                registerStep(low, {
-                  type: 'delete', actionLabel: `${it.title}を削除（理数${Math.round(target * 100)}：英語${100 - Math.round(target * 100)}の割合に合わせるため）`,
-                  allowRatioRuleDelete: true,
-                  adjustedNote: '', editPatch: {}, mutateFn: () => {}
-                });
-                setPlan(it.id, { deleteReason: '理数系と英語の割合に合わせるため' });
+                if (partial) {
+                  const keepSets = itSets - moved;
+                  registerStep(low, {
+                    type: 'modify', actionLabel: `${it.title}を×${keepSets}へ減枠（理系${Math.round(target * 100)}：文系${100 - Math.round(target * 100)}の割合に合わせるため）`,
+                    adjustedNote: `修正: 理系科目と文系科目の割合に合わせて減枠（${itSets}→${keepSets}セット）`,
+                    editPatch: { sets: keepSets },
+                    mutateFn: (targetIt) => { targetIt.sets = keepSets; targetIt.baseMins = Math.max(0, (targetIt.baseMins || itSets * perSet) - moved * perSet); }
+                  });
+                } else {
+                  registerStep(low, {
+                    type: 'delete', actionLabel: `${it.title}を削除（理系${Math.round(target * 100)}：文系${100 - Math.round(target * 100)}の割合に合わせるため）`,
+                    allowRatioRuleDelete: true,
+                    adjustedNote: '', editPatch: {}, mutateFn: () => {}
+                  });
+                  setPlan(it.id, { deleteReason: '理系科目と文系科目の割合に合わせるため' });
+                }
                 used.add(it.id);
                 done = true;
                 break;
@@ -3967,10 +4012,11 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
               if (!done) break;
             }
           }
-        }
+        };
+        applyRatioBalance();
 
         // ---------------------------------------------------------
-        // (5d) 実行中の枠が優先度の低い英語で、理数系を優先して直す必要がある時
+        // (5d) 実行中の枠が優先度の低い文系科目で、理系科目を優先して直す必要がある時
         //      ・すでに付いている◯は残す／実行中のセットは「継続」（開始から10分以内なら選択画面で確認）
         //      ・まだ実行していないセットを抜き出して、余った時間は優先度の高い科目へ（下の穴埋めで入る）
         // ---------------------------------------------------------
@@ -3996,11 +4042,11 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
               };
               activeChoiceInfo = choice;
               const unit = Math.round(effDur / Math.max(1, ae.target));
-              const newNote = `理数系を優先するため未実行${removable}セットを外した枠`;
+              const newNote = `理系科目を優先するため未実行${removable}セットを外した枠`;
               registerStep(ae, {
                 type: 'modify',
                 actionLabel: `${it.title}：実行中は継続し、未実行${removable}セットを外す（余った時間は優先度の高い科目へ）`,
-                adjustedNote: `修正: 未実行${removable}セットを外して理数系へ（×${ae.target}→×${choice.keepSets}）`,
+                adjustedNote: `修正: 未実行${removable}セットを外して理系科目へ（×${ae.target}→×${choice.keepSets}）`,
                 editPatch: { sets: choice.keepSets, note: newNote },
                 mutateFn: (targetIt) => {
                   const n = choice.keepRunning ? choice.keepSets : choice.unstartSets;
@@ -4025,8 +4071,8 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
 
         let simulatedEnd = simulateProjectedEndMins();
 
-        // 6-0. 全部を入れようとせず、まず英語（低優先度）を削る／減らす。休憩を詰めるのはその後
-        // （優先順位の低い科目から削る処理。lowOnly=trueなら英語系だけ）
+        // 6-0. 全部を入れようとせず、まず文系科目（低優先度）を削る／減らす。休憩を詰めるのはその後
+        // （優先順位の低い科目から削る処理。lowOnly=trueなら文系科目系だけ）
         //      （下限セット数まで圧縮 → それでも足りなければ枠ごと削除。数学・物理は消さない／回収した枠は守る）
         const trimByPriority = (lowOnly) => {
         if (simulatedEnd > curfewMins()) {
@@ -4231,7 +4277,7 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
               const filledSets = (key) => Array.from(planMap.values())
                 .filter(st => st.newItem && st.isFill && getSubjectKey(st.newItem) === key)
                 .reduce((n, st) => n + (st.newItem.sets || 0), 0);
-              // 余り時間の穴埋めは、夜でも数学・物理（優先度の高い順）から。英語（3位）は数学・物理が上限まで入った後の最後の手段
+              // 余り時間の穴埋めは、夜でも数学・物理（優先度の高い順）から。文系科目（3位）は数学・物理が上限まで入った後の最後の手段
               const ovrF = ratioOver();
               const subj = [...RECOVERY_SUBJECTS].sort((a, b) => ovrF < 0 ? 0 : ((ratioGrpOfKey(a.key) === ovrF ? 1 : 0) - (ratioGrpOfKey(b.key) === ovrF ? 1 : 0)))
                 .find(sj => sj.key !== 'rules' && !(__zero !== -1 && __grp(sj.key) === __zero) && (!stemOnlyFill || __zero === 0 || STEM_KEYS_FILL.includes(sj.key)) && filledSets(sj.key) < MAX_SETS_PER_ITEM);
@@ -4342,7 +4388,7 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
                 applyDelta(c, addedMins[c.item.id], `${c.item.title}を+${addedMins[c.item.id]}分延長（22:55前後に収める）`.replace(/22:55/g, fmtEnd()), `修正: 22:55に合わせて+${addedMins[c.item.id]}分延長`.replace(/22:55/g, fmtEnd()));
                 continue;
               }
-              // 延ばせる枠が無ければ、理数系（なければ英語）の枠を新しく追加
+              // 延ばせる枠が無ければ、理系科目（なければ文系科目）の枠を新しく追加
               const ovr8 = ratioOver();
               if (gap < 60) break;   // 2回分(60分)に満たない空きは、1回だけの枠を作らずそのまま
               const subj = [...RECOVERY_SUBJECTS].sort((a, b) => ovr8 < 0 ? 0 : ((ratioGrpOfKey(a.key) === ovr8 ? 1 : 0) - (ratioGrpOfKey(b.key) === ovr8 ? 1 : 0)))
@@ -4394,6 +4440,9 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
             }
           }
         }
+
+        // (8-b) 追加・削減・時間合わせのあとで割合がずれていたら、もう一度だけ割合どおりに入れ替える（何回も修正案を押さなくても収まるように）
+        try { applyRatioBalance(); } catch (_) {}
 
         // ---------------------------------------------------------
         // (9) 同じ科目のタスクはまとめる
@@ -4776,13 +4825,44 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
       `;
     }
 
+    // 未記入の項目へ移動している間は、移動元（いま記入した項目）と記入が終わった項目を操作できないようにする（移動先に着いて止まったら解除）
+    let __pendLockTimer = null;
+    function startPendLock(targetId, sourceIds) {
+      let ids = [];
+      try { ids = recalcTimeline().entries.filter(e => e.isPastPending).map(e => e.item.id); } catch (_) {}
+      const src = sourceIds || [];
+      ids = ids.filter(id => src.indexOf(id) === -1);   // 移動元は、まだ未記入でも操作させない
+      if (targetId && ids.indexOf(targetId) === -1) ids.push(targetId);
+      let st = document.getElementById('pend-lock-style');
+      if (!st) { st = document.createElement('style'); st.id = 'pend-lock-style'; document.head.appendChild(st); }
+      const esc = (v) => String(v).replace(/["\\]/g, '\\$&');
+      st.textContent = 'body.pend-moving #schedule-container [data-item-id]' + ids.map(id => ':not([data-item-id="' + esc(id) + '"])').join('') + '{pointer-events:none !important}';
+      document.body.classList.add('pend-moving');
+      clearTimeout(__pendLockTimer); __pendLockTimer = setTimeout(endPendLock, 3000);   // 念のための上限
+    }
+    function endPendLock() { document.body.classList.remove('pend-moving'); clearTimeout(__pendLockTimer); }
+    function endPendLockWhenArrived(targetId) {
+      let last = window.scrollY, still = 0; const t0 = performance.now();
+      (function chk() {
+        const y = window.scrollY; const now = performance.now();
+        if (Math.abs(y - last) < 0.5) still++; else still = 0;
+        last = y;
+        const el = document.querySelector(`[data-item-id="${targetId}"]`);
+        let near = true;
+        if (el) { const r = el.getBoundingClientRect(); near = Math.abs((r.top + r.height / 2) - window.innerHeight / 2) < Math.max(40, r.height); }   // 移動先が画面の中ほどに来た
+        if ((still >= 6 && near && now - t0 > 200) || now - t0 > 2600) endPendLock(); else requestAnimationFrame(chk);
+      })();
+    }
+    function moveToPendingLocked(itemId, title, label, sourceIds) {
+      startPendLock(itemId, sourceIds);
+      focusAndScrollToItem(itemId, label);
+      pointAtUnrecorded(itemId, title);
+      endPendLockWhenArrived(itemId);
+    }
     function focusFirstPastUnrecorded() {
       const { entries } = recalcTimeline();
       const first = entries.filter(e => e.isPastPending).sort((a, b) => a.startMins - b.startMins)[0];
-      if (first) {
-        focusAndScrollToItem(first.item.id, '◯×が未記入の項目');
-        pointAtUnrecorded(first.item.id, first.item.title);
-      }
+      if (first) moveToPendingLocked(first.item.id, first.item.title, '◯×が未記入の項目');
     }
 
     // 未記入の項目を、吹き出しでちょっとの間指す（スクロール中も追いかける）
@@ -5018,12 +5098,13 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
     // =========================================================
     // 修正案の実行中だけ、2倍速／まとめて終わらす（待ち時間を縮める）。速度は window.__fixSpeed（1 / 2 / 1e6）
     let __sleepCount = 0;
+    function sleepRaw(ms) { const sp = window.__fixRunning ? (window.__fixSpeed || 1) : 1; return sp >= 1000 ? Promise.resolve() : new Promise(resolve => setTimeout(resolve, ms / sp)); }   // 移動ステップ用：待ち時間を詰めない
     function sleep(ms) {
       const sp = window.__fixRunning ? (window.__fixSpeed || 1) : 1;
       if (sp >= 1000) {   // まとめて終わらす：待たずに進める（たまに画面を描画させる）
         return (++__sleepCount % 40 === 0) ? new Promise(resolve => setTimeout(resolve, 0)) : Promise.resolve();
       }
-      return new Promise(resolve => setTimeout(resolve, ms / sp));
+      return new Promise(resolve => setTimeout(resolve, (ms >= 200 ? Math.max(90, ms * 0.4) : ms) / sp));   // 長い“間”は詰める（止まって見えないように）
     }
 
     function easeInOutCubic(t) {
@@ -5482,34 +5563,69 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
           await sleep(620);
 
         } else if (step.type === 'insert_study') {
-          setAutoFixBanner(`${progressLabel}：「${step.originalTitle}」を${step.isSwap ? '入れ替え中（理数系の◯が少ないため）' : (step.isFill ? '追加中（22:55まで学習を確保）' : '割り込ませ中（未達回収）')}`.replace(/22:55/g, fmtEnd()), true);
+          setAutoFixBanner(`${progressLabel}：「${step.originalTitle}」を${step.isSwap ? '入れ替え中（理系科目の◯が少ないため）' : (step.isFill ? '追加中（22:55まで学習を確保）' : '割り込ませ中（未達回収）')}`.replace(/22:55/g, fmtEnd()), true);
           if (window.fxPickFromCatalog && step.newItem && !appState.schedules[appState.activeDay].some(x => x.id === step.targetId)) {
             setAutoFixBanner(`${progressLabel}：項目欄から「${step.originalTitle}」を選び中`, true);
-            try { await window.fxPickFromCatalog(step.newItem, step.destItemId); } catch (_) {}
+            try { await window.fxPickFromCatalog(step.newItem, step.destItemId, false); } catch (_) {}
           }
+          const __landedSp = !!window.__fxSpacer;   // 項目欄から隙間まで運べた時は、そこへ差し込む
           const __insTopsS = captureItemTops();
+          if (window.__fxSpacer) { try { window.__fxSpacer.remove(); } catch (_) {} window.__fxSpacer = null; }   // 隙間を外し、同じ場所へ札を差し込む
           const lstS = appState.schedules[appState.activeDay];
           const destIdxS = lstS.findIndex(x => x.id === step.destItemId);
+          let __carried = false;
+          if (!__landedSp && !lstS.some(x => x.id === step.targetId) && destIdxS !== -1 && ((window.__fixRunning && window.__fixSpeed) || 1) < 1000 && typeof window.animateCameraFollowMove === 'function') {
+            // 追加も、移動と同じ運び方：札を時間割の端に出して、差し込み先まで運ぶ（周りの札と入れ替わり、画面が追いかける）
+            try {
+              document.body.classList.add('dd-carrying'); appState.openDrawerItemId = null;
+              clearTimeout(window.__dcT); window.__dcT = setTimeout(() => document.body.classList.remove('dd-carrying'), 25000);
+              const ns0 = { ...step.newItem, adjustedNote: step.finalAdjustedNote };
+              lstS.splice(destIdxS < lstS.length / 2 ? 0 : lstS.length, 0, ns0);   // 差し込み先に近いほうの端から出す
+              appState.trackingBadge = { itemId: step.targetId, text: '選択中', phase: 'selected', editFields: [] };
+              renderScheduleCards(); renderSummaryCard();
+              const el0 = document.querySelector(`[data-item-id="${step.targetId}"]`);
+              if (el0) el0.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              await sleep(720);
+              const firstDocTops = captureItemTops();
+              const bEl = document.querySelector(`[data-item-id="${step.targetId}"]`);
+              const startDocTop = bEl ? (bEl.getBoundingClientRect().top + window.scrollY) : 0;
+              const cardHeight = bEl ? bEl.getBoundingClientRect().height : 110;
+              const fi = lstS.findIndex(x => x.id === step.targetId);
+              if (fi !== -1) { const [mv] = lstS.splice(fi, 1); const di = lstS.findIndex(x => x.id === step.destItemId); lstS.splice(di === -1 ? lstS.length : di, 0, mv); }
+              appState.trackingBadge = { itemId: step.targetId, text: '移動先へ搬送中...', phase: 'moving', editFields: [] };
+              renderScheduleCards(); renderSummaryCard();
+              await window.animateCameraFollowMove(step.targetId, firstDocTops, startDocTop, cardHeight, 1750);
+              __carried = true;
+            } catch (err) { console.warn('carry insert', err); }
+            clearTimeout(window.__dcT); document.body.classList.remove('dd-carrying');
+          }
           if (!lstS.some(x => x.id === step.targetId)) {
             const ns = { ...step.newItem, adjustedNote: step.finalAdjustedNote };
             if (destIdxS === -1) lstS.push(ns); else lstS.splice(destIdxS, 0, ns);
           }
           appState.trackingBadge = {
             itemId: step.targetId,
-            text: step.isSwap ? '優先度の高い理数系へ入れ替え' : (step.isFill ? '22:55まで学習を追加'.replace(/22:55/g, fmtEnd()) : '未達回収で割り込み'),
+            text: step.isSwap ? '優先度の高い理系科目へ入れ替え' : (step.isFill ? '22:55まで学習を追加'.replace(/22:55/g, fmtEnd()) : '未達回収で割り込み'),
             phase: 'landed',
             editFields: []
           };
           renderScheduleCards();
           renderSummaryCard();
-          const nsEl = document.querySelector(`[data-item-id="${step.targetId}"]`);
-          if (nsEl) nsEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          await window.reflowSwap(__insTopsS, step.targetId);
+          if (!__carried) {
+            const nsEl = document.querySelector(`[data-item-id="${step.targetId}"]`);
+            if (nsEl) nsEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            await window.reflowSwap(__insTopsS, step.targetId);
+          }
           await sleep(300);
 
         } else if (step.type === 'insert_break') {
           setAutoFixBanner(`${progressLabel}：「${step.afterTitle || '直前の学習'}」の後に${step.isLong ? '長休憩' : '15分休憩'}を追加`, true);
+          if (window.fxPickFromCatalog && step.newItem && !appState.schedules[appState.activeDay].some(x => x.id === step.targetId)) {
+            setAutoFixBanner(`${progressLabel}：項目欄から「${step.newItem.title || '休憩'}」を選び中`, true);
+            try { await window.fxPickFromCatalog(step.newItem, step.destItemId, false); } catch (_) {}
+          }
           const __insTopsB = captureItemTops();
+          if (window.__fxSpacer) { try { window.__fxSpacer.remove(); } catch (_) {} window.__fxSpacer = null; }   // 隙間を外し、同じ場所へ差し込む
           const lst = appState.schedules[appState.activeDay];
           if (step.replaceId) {
             const rIdx = lst.findIndex(x => x.id === step.replaceId);
@@ -5535,6 +5651,9 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
           await sleep(300);
 
         } else if (step.type === 'move') {
+          // 手動で持ち運ぶ時と同じ：カードの中身を全部閉じた状態で、持ち上げて運ぶ
+          document.body.classList.add('dd-carrying'); appState.openDrawerItemId = null;
+          clearTimeout(window.__dcT); window.__dcT = setTimeout(() => document.body.classList.remove('dd-carrying'), 25000);
           setAutoFixBanner(`${progressLabel}：「${step.originalTitle}」を選択中`, true);
           appState.trackingBadge = {
             itemId: targetId,
@@ -5543,7 +5662,7 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
             editFields: []
           };
           renderScheduleCards();
-          await sleep(720);
+          await sleepRaw(720);
 
           const firstDocTops = new Map();
           document.querySelectorAll('[data-item-id]').forEach(el => {
@@ -5569,7 +5688,7 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
             setAutoFixBanner(`${progressLabel}：移動先へ画面追従中`, true);
             await animateCameraFollowMove(targetId, firstDocTops, startDocTop, cardHeight, 1750);
           } else {
-            await sleep(720);
+            await sleepRaw(720);
           }
 
           setAutoFixBanner(`${progressLabel}：移動完了`, true);
@@ -5580,7 +5699,9 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
             editFields: []
           };
           renderScheduleCards();
-          await sleep(620);
+          await sleepRaw(620);
+          clearTimeout(window.__dcT); document.body.classList.remove('dd-carrying');   // 置いたら、カードを元の開閉に戻す
+          try { renderScheduleCards(); } catch (_) {}
 
         } else {
           const patch = step.editPatch || {};
@@ -6886,12 +7007,7 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
       document.getElementById('summary-missed-bar').style.width = `${missedPct}%`;
 
       const missedBadge = document.getElementById('summary-missed-badge');
-      if (missedUnits > 0) {
-        missedBadge.textContent = `× ${missedUnits}`;
-        missedBadge.classList.remove('hidden');
-      } else {
-        missedBadge.classList.add('hidden');
-      }
+      missedBadge.classList.add('hidden');   // ×の数の表示は出さない
 
       const endStr = (totalEndMins >= 1440 ? '翌' : '') + formatTime(totalEndMins);
       const endEl = document.getElementById('summary-end-time');
@@ -7646,9 +7762,11 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
       try { __pendSnapshot = recalcTimeline().entries.filter(e => e.isPastPending).map(e => e.item.id); } catch (_) {}
     }
     document.addEventListener('pointerdown', (e) => {
-      if (e.target && e.target.closest && e.target.closest('[data-item-id]')) snapshotPendingIds();   // 記入する前の状態を覚えておく
+      const __it = e.target && e.target.closest && e.target.closest('[data-item-id]');
+      if (__it) { window.__lastTouchedItemId = __it.getAttribute('data-item-id'); snapshotPendingIds(); }   // 記入する前の状態を覚えておく
     }, true);
     function jumpToNextUnrecordedAfterFill() {
+      if (window.__pomoRecording) { snapshotPendingIds(); return; }   // タイマーのカードで記録した時は、時間割の項目へ移動しない
       if (appState.editMode || appState.isAnimating) return;
       const entries = recalcTimeline().entries;
       const pending = entries.filter(e => e.isPastPending);
@@ -7658,13 +7776,14 @@ input,textarea,[contenteditable=""],[contenteditable="true"],[contenteditable="p
       const lastFilledIdx = Math.max(...filledIds.map(id => entries.findIndex(e => e.item.id === id)));
       const next = pending.find(e => entries.indexOf(e) > lastFilledIdx) || pending[0];
       clearTimeout(__nextPendTimer);
-      __nextPendTimer = setTimeout(() => {   // ◯のアニメが終わってから移動
-        if (appState.editMode || appState.isAnimating) return;
+      const __srcIds = filledIds.concat(window.__lastTouchedItemId ? [window.__lastTouchedItemId] : []);
+      startPendLock(next.item.id, __srcIds);   // 記入した瞬間から、移動し終わるまで移動元を操作できない
+      __nextPendTimer = setTimeout(() => {   // 1つ記入し終わったら、すぐ次の未記入へ移動（移動中は記入済みの項目を操作できない）
+        if (window.__pomoRecording || appState.editMode || appState.isAnimating) { endPendLock(); return; }
         const still = recalcTimeline().entries.find(e => e.item.id === next.item.id && e.isPastPending);
-        if (!still) return;
-        focusAndScrollToItem(next.item.id, '次の未記入');
-        pointAtUnrecorded(next.item.id, next.item.title);
-      }, 650);
+        if (!still) { endPendLock(); return; }
+        moveToPendingLocked(next.item.id, next.item.title, '次の未記入', __srcIds);
+      }, 0);
     }
 
     function checkAndNotifyAllCompleted() {
@@ -9729,7 +9848,7 @@ window.guardRecordedEdit = function (id) {
     '黒本': ['演習・その他', '演習'], '過去問': ['演習・その他', '演習'], '予習': ['演習・その他', '演習'], '受講': ['演習・その他', '演習'], '塾': ['演習・その他', '演習'], '解き直し': ['演習・その他', '復習'],
     '暗記 or うんち': ['勉強・作業', 'その他'], '昼食 1時間＋15分仮眠': ['休憩', '休憩'], '休憩 20分': ['休憩', '休憩'], '休憩 15分': ['休憩', '休憩'], '休憩 10分': ['休憩', '休憩']
   };
-  function catCategoryForHeading(heading) { const h = String(heading || '').toLowerCase(); if (/物理|physics/.test(h)) return 'physics'; if (/数学|数[ⅠⅡⅢ１２３]|数[1-3]|math|calculus/.test(h)) return 'math'; if (/英語|english|rules|解釈|ポラリス|vintage/.test(h)) return 'english'; if (/復習|解き直し|定着|review/.test(h)) return 'review'; if (/演習|過去問|黒本|塾|受講|exam/.test(h)) return 'exam'; return ''; }
+  function catCategoryForHeading(heading) { const h = String(heading || '').toLowerCase(); if (/物理|physics/.test(h)) return 'physics'; if (/数学|数[ⅠⅡⅢ１２３]|数[1-3]|math|calculus/.test(h)) return 'math'; if (/英語|文系|english|rules|解釈|ポラリス|vintage/.test(h)) return 'english'; if (/復習|解き直し|定着|review/.test(h)) return 'review'; if (/演習|過去問|黒本|塾|受講|exam/.test(h)) return 'exam'; return ''; }
   const CAT_COLORS = { physics: '#4F46E5', math: '#7C3AED', english: '#0D9488', exam: '#D97706', review: '#059669', routine: '#64748B', break_blue: '#2563EB', break_red: '#E11D48', break_green: '#059669', break_rest: '#0EA5E9' };
   function catSafeColor(value, fallback) { return /^#[0-9a-f]{6}$/i.test(String(value || '')) ? String(value) : fallback; }
   function catDefaultColor(c) { return CAT_COLORS[(c && c.kind) || (c && c.category) || 'routine'] || CAT_COLORS.routine; }
@@ -9755,7 +9874,7 @@ window.guardRecordedEdit = function (id) {
         cid: String(c.cid || ('default_' + i)),
         genre: String(genre),
         g: String(genre),
-        heading: String(heading),
+        heading: String(heading) === '文系科目' ? '英語' : String(heading),
         color: catSafeColor(c.color, catDefaultColor(c)),
         mins: Math.max(5, Math.min(480, Number(c.mins) || (c.kind ? 10 : 30))),
         minsPerSet: Math.max(5, Math.min(240, Number(c.minsPerSet) || 30))
@@ -9767,7 +9886,7 @@ window.guardRecordedEdit = function (id) {
     let saved = null;
     try { saved = JSON.parse( __ls.get(CAT_STRUCTURE_KEY) || 'null'); } catch (_) {}
     const genres = Array.isArray(saved && saved.genres) ? Array.from(new Set(saved.genres.map(x => String(x || '').trim()).filter(Boolean))) : [];
-    const headings = Array.isArray(saved && saved.headings) ? saved.headings.map(x => ({ genre: String(x && x.genre || '').trim(), name: String(x && x.name || '').trim() })).filter(x => x.genre && x.name) : [];
+    const headings = Array.isArray(saved && saved.headings) ? saved.headings.map(x => ({ genre: String(x && x.genre || '').trim(), name: (String(x && x.name || '').trim() === '文系科目' ? '英語' : String(x && x.name || '').trim()) })).filter(x => x.genre && x.name) : [];
     return { genres, headings };
   })();
   function ensureCatalogGenre(genre) {
@@ -12560,10 +12679,10 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
   });
   // ---- 修正案の中身（編集中）：決めた開始〜終了の範囲にちょうど収まる「あるべき時間割」を作る（ここでは適用しない） ----
   //   ・記録のある枠／固定枠（受講・塾・朝の固定）は触らない。
-  //   ・理数系：英語の目標比率でグループ総量を整え、グループ内は編集可能な重みに比例して配分する。
+  //   ・理系科目：文系科目の目標比率でグループ総量を整え、グループ内は編集可能な重みに比例して配分する。
   //     科目ごとの充足度（現在セット数÷理想比率）が低い科目を選び、優先順位の上から埋めない。
-  //     rules は通常3セット固定だが英語グループの比率に含め、英語0%では未着手枠を外す。
-  //   ・英語は1日の上限：rules=3／解釈=4まで／ポラリス=2まで／Vintage=4まで（SUBJECT_DAILY_LIMIT）
+  //     rules は通常3セット固定だが文系科目グループの比率に含め、文系科目0%では未着手枠を外す。
+  //   ・文系科目は1日の上限：rules=3／解釈=4まで／ポラリス=2まで／Vintage=4まで（SUBJECT_DAILY_LIMIT）
   //   ・同じ科目・同じ分野が続かないよう並べ、4セットの長い塊は2＋2に分ける
   //   ・休憩ルール（4〜5セットごとに10分／4タスクごとに長休憩）は最後に入れ直す
   function planOnce(key, src) {
@@ -12595,12 +12714,12 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
     const newId = () => 'ed_' + Date.now().toString(36) + (seq++).toString(36) + Math.random().toString(36).slice(2, 5);
     const cmp = (a, b) => { for (let i = 0; i < a.length; i++) { if (a[i] !== b[i]) return a[i] - b[i]; } return 0; };
 
-    // 科目ごとの集計（同じタイトル＝同じ科目）。理数系と英語に分け、全体の配分 6:4 を、それぞれの中の優先度（点数）で分け合う
+    // 科目ごとの集計（同じタイトル＝同じ科目）。理系科目と文系科目に分け、全体の配分 6:4 を、それぞれの中の優先度（点数）で分け合う
     const _sp = effectiveStemPercent();
     const MANUAL_RATIO = !getStemRatioSetting().auto;
-    const SHARE = [_sp, 100 - _sp];   // [理数系, 英語]（おまかせは通常6:4、理数の遅れで7:3、英語の遅れで5:5）
+    const SHARE = [_sp, 100 - _sp];   // [理系科目, 文系科目]（おまかせは通常6:4、理系の遅れで7:3、文系科目の遅れで5:5）
     const ZERO_GRP = SHARE[0] === 0 ? 0 : (SHARE[1] === 0 ? 1 : -1);
-    // rules は重み配分の対象外だが、固定セット数を英語グループの比率に加える。
+    // rules は重み配分の対象外だが、固定セット数を文系科目グループの比率に加える。
     // 今日の時間割にない科目も、時間があれば新しく入れて科目を増やす（自作の時間割には入れない）
     const CATALOG = {
       m3c:      { title: '数ⅢC',   category: 'math',    zone: 'stem_day' },
@@ -12716,7 +12835,7 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
     const totalOf = (a) => wake + a.reduce((s, it) => s + dur(it), 0);
     let laid = layout(), tot = totalOf(laid);
 
-    // rules は英語グループとして比率判定し、ほかの科目は最低2セット。
+    // rules は文系科目グループとして比率判定し、ほかの科目は最低2セット。
     const minOf = (s) => Math.min(2, s.cap);
     const cutOne = (pick) => {
       const item = pick.items.slice().sort((a, b) => b.sets - a.sets || list.indexOf(b) - list.indexOf(a))[0];
@@ -12808,7 +12927,7 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
       }
     };
 
-    // 5-b) 仕上げの入れ替え：1セットずつ足していくと端数で 理数6：英語4 からずれることがあるので、
+    // 5-b) 仕上げの入れ替え：1セットずつ足していくと端数で 理系6：文系4 からずれることがあるので、
     //      多い側の「配分より多い科目」を1セット減らし、少ない側の「配分より少ない科目」を1セット増やして、近づく時だけ採用する（終了時刻を超えるなら採用しない）
     const groupDev = () => {
       const a = [0, 0]; subjects().forEach(s => { a[s.grp] += s.total + s.credit; });
@@ -12849,7 +12968,7 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
       });
     };
 
-    // 配分の作り直し：いったん全科目を最低セットまで下げて、終了時刻まで 理数6：英語4 で積み直した結果を「目標セット数」にする
+    // 配分の作り直し：いったん全科目を最低セットまで下げて、終了時刻まで 理系6：文系4 で積み直した結果を「目標セット数」にする
     //   → 本物の時間割には、その目標との差だけを反映する（余計に入れ替えず、できるだけ今の枠を残す）
     {
       const saved = JSON.stringify(list);
@@ -13216,7 +13335,7 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
           if (it.kind !== 'study' || !(it.sets > 0) || isFixedFrameItem(it)) return;
           if (it.category === 'english' || /rules|解釈|ポラリス|vintage/i.test(it.title || '')) b += it.sets; else a += it.sets;
         });
-        showToast(`${formatTime(plan.wake)}〜${formatTime(plan.end)} まで、ぎっしり組まれています（理数${a}：英語${b}セット／目安は理数${effectiveStemPercent()}：英語${100 - effectiveStemPercent()}）`, 'emerald');
+        showToast(`${formatTime(plan.wake)}〜${formatTime(plan.end)} まで、ぎっしり組まれています（理系${a}：文系${b}セット／目安は理系${effectiveStemPercent()}：文系${100 - effectiveStemPercent()}）`, 'emerald');
       }
       else if (plan.tot > plan.end) showToast(`${window.__stuckReason ? window.__stuckReason() : 'これ以上は詰められません'}（終了時刻を${plan.tot - plan.end}分超えています）`, 'dark');
       else showToast(`終了まであと${plan.end - plan.tot}分空いていますが、動かせる学習枠がないため埋められません`, 'dark');
@@ -13453,6 +13572,7 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
       const cardPos = (k) => startDocTop + (endDocTop - startDocTop) * (cum[k] / totalH);   // k枚通過した時の札の位置
       const ease = (t) => t * t * (3 - 2 * t);
       destEl.style.position = 'relative'; destEl.style.zIndex = '40'; destEl.style.willChange = 'transform';
+      destEl.style.transition = 'none'; destEl.style.boxShadow = '0 16px 32px rgba(0,0,0,.35)'; destEl.style.borderRadius = '1rem';   // 持ち上げている見た目
       const t0 = performance.now(), T = D * n;
       const played = new Set();
       function frame(now) {
@@ -13463,7 +13583,7 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
         const cur = el_t >= T ? endDocTop : cardPos(k) + (cardPos(k + 1) - cardPos(k)) * e;
         const maxY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
         window.scrollTo(0, Math.max(0, Math.min(maxY, cur + cardHeight / 2 - window.innerHeight * 0.48)));
-        destEl.style.transform = `translateY(${cur - endDocTop}px) scale(1.02)`;
+        destEl.style.transform = `translateY(${cur - endDocTop}px) scale(1.04)`;
         sibs.forEach((sb, i) => {
           if (i < k) { sb.el.style.transform = ''; return; }
           if (i === k) {
@@ -13473,7 +13593,7 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
         });
         if (el_t < T) requestAnimationFrame(frame);
         else {
-          destEl.style.transform = ''; destEl.style.zIndex = ''; destEl.style.willChange = '';
+          destEl.style.transform = ''; destEl.style.zIndex = ''; destEl.style.willChange = ''; destEl.style.boxShadow = ''; destEl.style.borderRadius = '';
           sibs.forEach(sb => { sb.el.style.transform = ''; sb.el.style.transition = ''; sb.el.style.willChange = ''; });
           playLandPop(n);
           resolve();
@@ -13519,7 +13639,7 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
       finally { window.__fixRunning = false; show(false); }
     };
   })();
-  // ---- 修正案ボタンの長押し：理数系と英語の割合をゲージで設定（おまかせあり）。その割合で修正案を作る ----
+  // ---- 修正案ボタンの長押し：理系科目と文系科目の割合をゲージで設定（おまかせあり）。その割合で修正案を作る ----
   function openRatioGauge() {
     if (document.getElementById('ratio-gauge-wrap')) return;
     const dark = appState.theme === 'dark';
@@ -13534,9 +13654,9 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
     w.style.cssText = 'position:fixed;inset:0;z-index:330;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(0,0,0,.55)';
     const chip = (attr, label, val, bgc) => `<div ${attr} style="flex:1;border-radius:12px;padding:5px 10px;background:${bgc};color:#fff;display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:12px;font-weight:800">${label}</span><span style="font-size:22px;font-weight:900;line-height:1.2;font-variant-numeric:tabular-nums"><span ${val}></span><span style="font-size:12px">%</span></span></div>`;
     w.innerHTML = `<div role="dialog" aria-modal="true" aria-labelledby="ratio-gauge-title" style="max-width:380px;width:100%;border-radius:20px;padding:14px 14px 12px;background:${C.bg};color:${C.ink};font-weight:700;font-size:13px;line-height:1.45;max-height:92vh;max-height:92dvh;overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,.35)">
-      <div id="ratio-gauge-title" style="font-size:15px;font-weight:900;text-align:center">理数系：英語の割合</div>
-      <div style="display:flex;gap:8px;margin-top:8px">${chip('data-cs', '理数系', 'data-sv', C.stem)}${chip('data-ce', '英語', 'data-ev', C.eng)}</div>
-      <div data-g role="slider" tabindex="0" aria-label="理数系の割合" aria-valuemin="0" aria-valuemax="100" aria-valuestep="10" style="position:relative;height:44px;margin-top:6px;touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer;outline:none">
+      <div id="ratio-gauge-title" style="font-size:15px;font-weight:900;text-align:center">理系科目：文系科目の割合</div>
+      <div style="display:flex;gap:8px;margin-top:8px">${chip('data-cs', '理系科目', 'data-sv', C.stem)}${chip('data-ce', '文系科目', 'data-ev', C.eng)}</div>
+      <div data-g role="slider" tabindex="0" aria-label="理系科目の割合" aria-valuemin="0" aria-valuemax="100" aria-valuestep="10" style="position:relative;height:44px;margin-top:6px;touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer;outline:none">
         <div data-track style="position:absolute;left:12px;right:12px;top:8px;height:28px;border-radius:999px;overflow:hidden;background:${C.track};display:flex">
           <div data-bs style="background:${C.stem};height:100%"></div>
           <div data-be style="background:${C.eng};height:100%;flex:1"></div>
@@ -13547,7 +13667,7 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
       <div data-autonote style="font-size:11px;color:${C.sub};font-weight:700;margin-top:5px;text-align:center;line-height:1.4"></div>
       <details style="margin-top:8px;border:1px solid ${C.line};border-radius:12px;padding:7px 9px;background:${C.card}">
         <summary style="cursor:pointer;font-size:11px;font-weight:900">科目ごとの重みを編集（1〜10）</summary>
-        <div style="font-size:10px;color:${C.sub};margin:4px 0 6px">グループ内の理想比率へ反映します。rules は英語として比率に含め、理系100%では入れ替えます。</div>
+        <div style="font-size:10px;color:${C.sub};margin:4px 0 6px">グループ内の理想比率へ反映します。rules は文系科目として比率に含め、理系科目100%では入れ替えます。</div>
         <div data-weight-list style="display:grid;grid-template-columns:1fr 1fr;gap:7px"></div>
       </details>
       <div data-now style="margin-top:7px;border-radius:12px;padding:6px 10px;background:${C.card};font-size:11px;line-height:1.6"></div>
@@ -13606,7 +13726,7 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
           if (!n) return `<div style="display:flex;justify-content:space-between"><span>${label}</span><span style="color:${C.sub}">学習の枠なし</span></div>`;
           const pc = Math.round(o.s / n * 100), diff = pc - t, ok = Math.abs(diff) <= 5;
           const badge = ok ? '目標内' : `${diff > 0 ? '+' : '−'}${Math.abs(diff)}pt ずれ`;
-          return `<div style="display:flex;justify-content:space-between;gap:8px"><span>${label}</span><span style="font-variant-numeric:tabular-nums;text-align:right">理数 <b style="color:${C.stemTx}">${pc}</b> : 英語 <b style="color:${C.engTx}">${100 - pc}</b>（${n}セット） <b style="color:${ok ? C.engTx : C.warn}">${badge}</b></span></div>`;
+          return `<div style="display:flex;justify-content:space-between;gap:8px"><span>${label}</span><span style="font-variant-numeric:tabular-nums;text-align:right">理系科目 <b style="color:${C.stemTx}">${pc}</b> : 文系科目 <b style="color:${C.engTx}">${100 - pc}</b>（${n}セット） <b style="color:${ok ? C.engTx : C.warn}">${badge}</b></span></div>`;
         };
         q('[data-now]').innerHTML = `<div style="font-weight:900">いまの予定（目標 ${t}：${100 - t}）</div>${row('1日ぜんぶ', rr.all)}${row('これから', rr.rest)}`;
       }
@@ -13615,8 +13735,8 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
       a.style.border = `2px solid ${auto ? C.autoBg : C.autoTx}`;
       a.style.background = auto ? C.autoBg : 'transparent';
       a.style.color = auto ? '#fff' : C.autoTx;
-      q('[data-autonote]').textContent = auto ? '基本は理数6：英語4。理数の遅れは7：3、英語の遅れは5：5にします。' : (stem === 0 || stem === 100) ? `${stem === 0 ? '理数系' : '英語'}は0割：比率配分には入れません。残りは${stem === 0 ? '英語' : '理数系'}で組みます。` : 'これからの予定を、この割合で組み直します。';
-      q('[data-y]').textContent = auto ? 'おまかせで修正案を作る' : `理数${stem}：英語${100 - stem}で修正案を作る`;
+      q('[data-autonote]').textContent = auto ? '基本は理系科目6：文系科目4。理系科目の遅れは7：3、文系科目の遅れは5：5にします。' : (stem === 0 || stem === 100) ? `${stem === 0 ? '理系科目' : '文系科目'}は0割：比率配分には入れません。残りは${stem === 0 ? '文系科目' : '理系科目'}で組みます。` : 'これからの予定を、この割合で組み直します。';
+      q('[data-y]').textContent = auto ? 'おまかせで修正案を作る' : `理系科目${stem}：文系科目${100 - stem}で修正案を作る`;
     };
     const setStem = (v) => {
       v = Math.min(100, Math.max(0, v));
@@ -14562,7 +14682,7 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
         }
         if (!did) break;
       }
-      // 3) 30分以上余っている：優先順位が高く、まだ少ない科目から1セットずつ足す（1項目4回まで／英語は1日の上限まで）
+      // 3) 30分以上余っている：優先順位が高く、まだ少ない科目から1セットずつ足す（1項目4回まで／文系科目は1日の上限まで）
       const blocked = new Set(); let added = 0;
       for (let g = 0; g < 60 && LIMIT - lastEnd() >= SET; g++) {
         const subj = (it) => getSubjectKey(it) || it.title;
@@ -14615,7 +14735,7 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
     return changed;
   }
 
-  // ---------- 割合の確認：1日ぜんぶ／これから（理数系：英語） ----------
+  // ---------- 割合の確認：1日ぜんぶ／これから（理系科目：文系科目） ----------
   const RG_STEM = ['m3c', 'm1a', 'm2b', 'phys'], RG_ENG = ['rules', 'kaishaku', 'vintage', 'polaris'];
   function ratioReport() {
     const list = appState.schedules[appState.activeDay] || [];
@@ -14637,7 +14757,7 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
       const { rest } = ratioReport(), n = rest.s + rest.e, t = cfg.stem;
       if (!n || (n < 4 && t !== 0 && t !== 100)) return;
       const p = Math.round(rest.s / n * 100), ok = Math.abs(p - t) <= 10;
-      showToast(ok ? `割合OK：これから 理数${p}：英語${100 - p}（目標 理数${t}：英語${100 - t}）` : `割合がずれています：これから 理数${p}：英語${100 - p}（目標 理数${t}：英語${100 - t}）`, ok ? 'emerald' : 'dark');
+      showToast(ok ? `割合OK：これから 理系${p}：文系${100 - p}（目標 理系${t}：文系${100 - t}）` : `割合がずれています：これから 理系${p}：文系${100 - p}（目標 理系${t}：文系${100 - t}）`, ok ? 'emerald' : 'dark');
     } catch (_) {}
   }
 
@@ -15400,9 +15520,9 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
     ], { duration: 700, easing: 'ease-out' });
   };
   // 項目の追加：項目欄を開いて、スクロールして探し、目的の項目を持ち上げて、時間割の差し込み先へ運ぶ
-  window.fxPickFromCatalog = function (newItem, destId) {
+  window.fxPickFromCatalog = function (newItem, destId, noFly) {
     return new Promise(async (resolve) => {
-      let clone = null;
+      let clone = null, spacer = null, landed = false;
       const drawer = document.getElementById('cat-drawer'), list = document.getElementById('cat-list'), scrim = document.getElementById('cat-scrim');
       const closeDrawer = () => {
         const cb = document.getElementById('cat-close');
@@ -15412,7 +15532,7 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
         const sp = Math.max(1, (window.__fixRunning && window.__fixSpeed) || 1);
         const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (sp >= 1000 || reduce || !newItem || typeof window.openCatalog !== 'function' || !drawer || !list) { resolve(); return; }
-        const W = (ms) => new Promise(r => setTimeout(r, Math.max(30, ms / sp)));
+        const W = (ms) => new Promise(r => setTimeout(r, Math.max(30, (ms >= 200 ? ms * 0.45 : ms) / sp)));
         const norm = (v) => String(v || '').normalize('NFKC').replace(/\s+/g, '');
         window.openCatalog();   // 項目欄を開く
         list.scrollTop = 0;
@@ -15422,13 +15542,17 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
         let chip = newItem.catalogId ? chips.find(c => c.dataset.catId === newItem.catalogId) : null;
         if (!chip) chip = chips.find(c => norm((c.querySelector('.cat-name') || {}).textContent) === t);
         if (!chip) chip = chips.find(c => { const n = norm((c.querySelector('.cat-name') || {}).textContent); return n && t && (t.startsWith(n) || n.startsWith(t)); });
+        if (!chip && newItem.kind && newItem.kind !== 'study') {   // 休憩：名前が違っても「休憩 ◯分」の項目を、時間で探す
+          const mm = (newItem.plannedMins || newItem.baseMins || 0) + '分';
+          chip = chips.find(c => c.className.indexOf('cat-chip') !== -1 && norm((c.querySelector('.cat-s') || {}).textContent) === mm && /休憩|仮眠|break/i.test(c.textContent + c.className));
+        }
         const cr0 = chip && chip.getBoundingClientRect();
         if (!chip || !cr0 || cr0.height < 2) { closeDrawer(); await W(400); resolve(); return; }   // 項目欄に見つからなければ、そのまま差し込む
         // 項目欄をスクロールして、目的の項目まで進む
         const lr = list.getBoundingClientRect();
         const want = Math.max(0, Math.min(list.scrollHeight - list.clientHeight, list.scrollTop + (cr0.top - lr.top) - lr.height / 2 + cr0.height / 2));
         if (want > 40) {
-          const dur = Math.max(650, Math.min(1700, 500 + want * 0.9)) / sp, t0 = performance.now(), ease = (x) => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+          const dur = Math.max(350, Math.min(1000, 300 + want * 0.6)) / sp, t0 = performance.now(), ease = (x) => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
           await new Promise(r => { (function step(now) { const k = Math.min(1, (now - t0) / dur); list.scrollTop = want * ease(k); if (k < 1) requestAnimationFrame(step); else r(); })(t0); });
         } else { await W(300); }
         await W(180);
@@ -15444,11 +15568,19 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
         const cr = chip.getBoundingClientRect();
         clone = chip.cloneNode(true);
         clone.removeAttribute('data-cat'); clone.removeAttribute('data-cat-id');
-        clone.style.cssText += `;position:fixed;left:${cr.left}px;top:${cr.top}px;width:${cr.width}px;height:${cr.height}px;margin:0;box-sizing:border-box;z-index:95;pointer-events:none;will-change:transform,opacity;background-color:#fff`;
+        clone.style.cssText += `;position:fixed;left:${cr.left}px;top:${cr.top}px;width:${cr.width}px;height:${cr.height}px;margin:0;box-sizing:border-box;z-index:95;pointer-events:none;will-change:transform,opacity;background-color:${appState.theme === 'dark' ? '#343F8F' : '#C7D2FE'};border:3px solid ${appState.theme === 'dark' ? '#A5B4FC' : '#4F46E5'}`;
         document.body.appendChild(clone);
         chip.style.opacity = '.35';
-        clone.animate([{ transform: 'scale(1.05)' }, { transform: 'scale(1.12) rotate(-2deg)' }], { duration: 220 / sp, easing: 'ease-out', fill: 'forwards' });
+        clone.style.boxShadow = 'none';   // 浮かせない
+        
         await W(240);
+        // 追加は、移動と同じ運び方：札を項目欄から時間割に出し、あとは時間割の中で運ぶ（ここでは項目欄を閉じるだけ）
+        if (noFly) {
+          closeDrawer();
+          try { clone.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 240 / sp, easing: 'ease-in', fill: 'forwards' }); } catch (_) {}
+          await W(340);
+          return;
+        }
         // 項目欄を閉じながら、差し込み先まで時間割をスクロール
         const all = Array.from(document.querySelectorAll('#schedule-container > [data-item-id]'));
         const destEl = destId ? all.find(w => w.dataset.itemId === destId) : null;
@@ -15456,24 +15588,41 @@ const dur = (r) => r.calcMode === 'range' ? rangeDur(r) : (r.per || 0) * (r.sets
         closeDrawer();
         if (ref) ref.scrollIntoView({ behavior: 'smooth', block: 'center' });
         await W(720);
-        // 差し込み先へ運ぶ
-        let tx = window.innerWidth / 2, ty = window.innerHeight / 2, sc = 1;
-        if (ref) {
-          const rr = ref.getBoundingClientRect();
-          tx = rr.left + rr.width / 2; ty = destEl ? rr.top + 4 : rr.bottom + 4;
-          sc = Math.max(.9, Math.min(1.5, rr.width / cr.width));
+        // 差し込み先へ運ぶ：手動で引っ張る時と同じく、カードを閉じて、破線の隙間をぬるっと開く
+        document.body.classList.add('dd-carrying');
+        const cont = document.getElementById('schedule-container');
+        let cardH = 64;   // 運ぶ札の高さ＝時間割の項目（閉じた状態）と同じ
+        try { const c0 = cont && cont.querySelector('[data-item-id]'); if (c0) { const h0 = c0.getBoundingClientRect().height; if (h0 > 20) cardH = Math.round(h0); } } catch (_) {}
+        if (cont) {
+          spacer = document.createElement('div');
+          spacer.className = 'dd-ph';
+          spacer.style.cssText = 'height:0;border-width:0;overflow:hidden;transition:height ' + (0.28 / sp) + 's cubic-bezier(.22,1,.36,1),border-width ' + (0.28 / sp) + 's ease';
+          cont.insertBefore(spacer, destEl || null);
+          requestAnimationFrame(() => { spacer.style.height = cardH + 'px'; spacer.style.borderWidth = '2px'; });
+          await W(320);
+          if (spacer.getBoundingClientRect().top < 0 || spacer.getBoundingClientRect().bottom > window.innerHeight) { spacer.scrollIntoView({ behavior: 'smooth', block: 'center' }); await W(500); }
         }
-        const dx = tx - (cr.left + cr.width / 2), dy = ty - (cr.top + cr.height / 2);
+        let tx = window.innerWidth / 2, ty = window.innerHeight / 2, tw = cr.width;
+        const tgt = spacer || ref;
+        if (tgt) {
+          const rr = tgt.getBoundingClientRect();
+          tx = rr.left + rr.width / 2; ty = spacer ? rr.top + rr.height / 2 : rr.bottom + 4;
+          tw = rr.width;
+        }
+        // 時間割の項目と同じ大きさ（幅＝時間割の幅、高さ＝閉じた項目の高さ）で運ぶ
+        const th = cardH, L1 = tx - tw / 2, T1 = ty - th / 2;
+        try { clone.getAnimations().forEach(a => a.cancel()); } catch (_) {}
         const fly = clone.animate([
-          { transform: 'translate(0,0) scale(1.12) rotate(-2deg)', opacity: 1, offset: 0 },
-          { transform: `translate(${dx * .5}px,${dy * .5 - 36}px) scale(1.2) rotate(2deg)`, opacity: 1, offset: .5 },
-          { transform: `translate(${dx}px,${dy}px) scale(${sc}) rotate(0deg)`, opacity: 1, offset: .82 },
-          { transform: `translate(${dx}px,${dy}px) scale(${sc})`, opacity: 0, offset: 1 }
-        ], { duration: 760 / sp, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' });
+          { left: cr.left + 'px', top: cr.top + 'px', width: cr.width + 'px', height: cr.height + 'px', offset: 0 },
+          { left: L1 + 'px', top: T1 + 'px', width: tw + 'px', height: th + 'px', offset: 1 }
+        ], { duration: 520 / sp, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' });
         try { await fly.finished; } catch (_) {}
+        if (spacer) { window.__fxSpacer = spacer; landed = true; }   // 隙間は、札を差し込む直前まで残す（周りが跳ねないように）
       } catch (_) {
       } finally {
-        try { if (clone) clone.remove(); } catch (_) {}
+        document.body.classList.remove('dd-carrying');
+        try { if (spacer && !landed) spacer.remove(); } catch (_) {}
+        try { if (clone) { const c0 = clone; if (landed && c0.animate) { c0.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, delay: 60, fill: 'forwards' }); setTimeout(() => { try { c0.remove(); } catch (_) {} }, 360); } else c0.remove(); } } catch (_) {}
         try { if (drawer && drawer.classList.contains('open')) closeDrawer(); } catch (_) {}
         resolve();
       }
@@ -15967,26 +16116,42 @@ window.__structSig = function (list, withTime) {
 </script>
 
 <script>
-/* ホームのポモドーロタイマー：今の項目・25分勉強/5分休憩・休憩中の◯×記録 */
+/* ホームのポモドーロタイマー：今の項目・25分勉強/5分休憩・休憩中の◯×記録（前の未記入分は横スライドで・いつでも記録OK） */
 (function () {
   const g = (id) => document.getElementById(id);
   const isBrk = (it) => /^break/.test(it.kind || '');
   const fmt = (s) => { s = Math.max(0, Math.round(s)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
-  let cache = [], cacheAt = 0, S = null;
+  const hm = (m) => { try { return formatTime(m); } catch (_) { return Math.floor(m / 60) + ':' + String(Math.floor(m % 60)).padStart(2, '0'); } };
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const MAX_SLIDES = 12;
+  let cache = [], cacheAt = 0, S = null, slides = [], sig = '__init__';
+
   function ensure() {
     let b = g('pomo-card'); if (b) return b;
     const a = g('summary-now'); if (!a || !a.parentNode) return null;
+    if (!g('pm-style')) { const st = document.createElement('style'); st.id = 'pm-style'; st.textContent = '#pm-sl::-webkit-scrollbar{display:none}#pm-sl button{-webkit-tap-highlight-color:transparent;transition:transform .12s ease,filter .12s ease}#pm-sl button:active{transform:scale(.95);filter:brightness(.94)}#pm-sl button:disabled{opacity:.6}'; document.head.appendChild(st); }
     b = document.createElement('div'); b.id = 'pomo-card'; b.className = 'order-last basis-full w-full';
     b.style.cssText = 'border-radius:20px;padding:14px 16px;color:#fff;background:#4f46e5';
-    b.innerHTML = '<div style="display:flex;align-items:center;gap:8px"><span id="pm-chip" style="font-size:13px;font-weight:900;background:rgba(255,255,255,.22);border-radius:999px;padding:2px 10px">勉強</span><span id="pm-title" style="font-size:16px;font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span><span id="pm-set" style="margin-left:auto;font-size:13px;font-weight:800;white-space:nowrap"></span></div>' +
+    b.innerHTML = '<div style="display:flex;align-items:center;gap:8px"><span id="pm-chip" style="font-size:13px;font-weight:900;background:rgba(255,255,255,.22);border-radius:999px;padding:2px 10px">勉強</span><span id="pm-title" style="font-size:16px;font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span><span id="pm-kind" style="display:none;font-size:11px;font-weight:800;background:rgba(255,255,255,.22);border-radius:999px;padding:2px 8px;white-space:nowrap"></span><span id="pm-set" style="margin-left:auto;font-size:13px;font-weight:800;white-space:nowrap"></span></div>' +
       '<div id="pm-time" style="font-size:54px;font-weight:900;line-height:1.15;text-align:center;font-variant-numeric:tabular-nums">--:--</div>' +
-      '<div style="height:8px;border-radius:4px;background:rgba(255,255,255,.28);overflow:hidden"><div id="pm-bar" style="height:100%;width:0;background:#fff"></div></div>' +
+      '<div id="pm-barwrap" style="height:8px;border-radius:4px;background:rgba(255,255,255,.28);overflow:hidden"><div id="pm-bar" style="height:100%;width:0;background:#fff"></div></div>' +
       '<div id="pm-range" style="font-size:12px;opacity:.9;margin-top:6px"></div><div id="pm-next" style="font-size:12px;opacity:.9"></div>' +
-      '<div id="pm-chk" style="display:none;margin-top:10px"><div id="pm-q" style="font-size:14px;font-weight:800;text-align:center;margin-bottom:6px"></div><div style="display:flex;gap:10px"><button type="button" id="pm-ok" style="flex:1;font-size:30px;padding:6px;border-radius:14px;border:0;background:#fff;color:#059669;font-weight:900">◯</button><button type="button" id="pm-ng" style="flex:1;font-size:30px;padding:6px;border-radius:14px;border:0;background:#fff;color:#e11d48;font-weight:900">×</button></div></div>';
+      '<div id="pm-chk" style="display:none;margin-top:12px"><div id="pm-sl" style="display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;overscroll-behavior-x:contain"></div><div id="pm-dots" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;font-size:11px;font-weight:800;min-height:14px"></div></div>';
     a.parentNode.insertBefore(b, a);
-    g('pm-ok').onclick = () => mark(true); g('pm-ng').onclick = () => mark(false);
+    const sl = g('pm-sl');
+    ['touchstart', 'touchmove', 'touchend'].forEach((t) => sl.addEventListener(t, (e) => e.stopPropagation(), { passive: true }));   // 横スライドが、ページ側の操作に取られないように
+    sl.addEventListener('scroll', () => { const w = sl.clientWidth || 1, i = Math.round(sl.scrollLeft / w); document.querySelectorAll('#pm-dots i').forEach((d, k) => { d.style.opacity = k === i ? '1' : '.4'; d.style.transform = k === i ? 'scale(1.3)' : 'scale(1)'; }); }, { passive: true });
+    sl.addEventListener('click', (ev) => {
+      const btn = ev.target.closest && ev.target.closest('button[data-a]'); if (!btn) return;
+      const slide = btn.closest('[data-i]'); const s = slides[Number(slide.getAttribute('data-i'))];
+      if (!s) return;
+      if (btn.getAttribute('data-a') === 'go') { try { focusFirstPastUnrecorded(); } catch (_) {} return; }   // 時間割へ移動して、最初の未記入へ誘導
+      slide.querySelectorAll('button').forEach((x) => { x.disabled = true; }); slide.style.opacity = '.45';
+      mark(s, btn.getAttribute('data-a') === 'ok');
+    });
     return b;
   }
+
   function calc() {
     const sec = getNowMinutes() * 60 + new Date().getSeconds();
     const idx = cache.findIndex(e => e.startMins * 60 <= sec && sec < e.endMins * 60);
@@ -15994,17 +16159,82 @@ window.__structSig = function (list, withTime) {
     if (idx < 0) return { mode: 'idle', sec, next: nextE };
     const e = cache[idx], it = e.item, st = e.startMins * 60, en = e.endMins * 60, o = { sec, e, it, st, en, next: nextE };
     if (it.kind === 'study' && it.sets > 0) {
-      const P = 1800, k = Math.min(it.sets - 1, Math.floor((sec - st) / P)), off = sec - st - k * P;
+      // 時間割どおり：1セットの長さ＝項目の時間÷セット数（アプリ本体の記録解禁の計算と同じ）。勉強は最大25分、残りがそのセットの休憩
+      const P = Math.max(600, (en - st) / it.sets), W = Math.min(1500, P), k = Math.max(0, Math.min(it.sets - 1, Math.floor((sec - st) / P))), off = sec - st - k * P;
       o.n = k + 1; o.N = it.sets;
-      if (off < 1500) { o.mode = 'study'; o.remain = Math.min(st + k * P + 1500, en) - sec; o.total = 1500; }
-      else { o.mode = 'break'; o.remain = Math.min(st + (k + 1) * P, en) - sec; o.total = 300; o.rec = (e.done + e.missed) >= o.n; }
-    } else if (it.kind === 'study') { o.mode = 'study'; o.remain = en - sec; o.total = en - st; }
-    else if (isBrk(it)) {
-      o.mode = 'break'; o.remain = en - sec; o.total = en - st;
-      const pv = cache[idx - 1]; if (pv && pv.item.kind === 'study') { o.chk = pv; o.n = pv.target || 1; o.rec = (pv.done + pv.missed) >= (pv.target || 1) || pv.item.completed || pv.item.missed > 0; }
-    } else { o.mode = 'other'; o.remain = en - sec; o.total = en - st; }
+      if (P > 1800 + 1) {
+        // 受講・塾など1セットが長い枠は、休憩ではなく「勉強」のまま。1セットの終わりまでの残り時間を出す（◯×は25分たったら記録できる）
+        o.mode = 'study'; o.remain = Math.min(st + (k + 1) * P, en) - sec; o.total = Math.max(1, Math.min(P, en - (st + k * P))); o.recOpen = off >= W;
+      } else if (off < W) { o.mode = 'study'; o.remain = Math.min(st + k * P + W, en) - sec; o.total = W; o.recOpen = false; }
+      else { o.recOpen = true; o.mode = 'break'; o.bStart = st + k * P + W; o.bEnd = k === it.sets - 1 ? en : Math.min(st + (k + 1) * P, en); o.remain = o.bEnd - sec; o.total = Math.max(1, o.bEnd - o.bStart); }
+    } else if (it.kind === 'study') { o.mode = 'study'; o.remain = en - sec; o.total = en - st; const nx = cache[idx + 1]; o.breakFollows = !!(nx && isBrk(nx.item)); }
+    else if (isBrk(it)) { o.mode = 'break'; o.remain = en - sec; o.total = en - st; }
+    else { o.mode = 'other'; o.remain = en - sec; o.total = en - st; }
     return o;
   }
+
+  const recorded = (x) => x.sets > 0 ? ((x.done || 0) + (x.missed || 0) >= x.sets) : (!!x.completed || (x.missed || 0) > 0);
+
+  // ◯×を付けられる分の一覧：①いまの項目（回数制は5分休憩の間だけ／チェック制は項目の間）②前の未記入分（いつでも）
+  function buildSlides() {
+    const out = [], e = S.e, it = S.it;
+    if (e && it && it.kind === 'study') {
+      if (S.N > 0) {
+        const dm = (e.done || 0) + (e.missed || 0);
+        const upto = S.recOpen ? S.n : S.n - 1;   // ここまでに終わっているセット数
+        const u = Math.min(upto - dm, S.N);
+        for (let i = 0; i < u; i++) {
+          const now = (i === 0 && S.recOpen);
+          out.push({ key: 's:' + it.id + ':' + (upto - i), id: it.id, past: !now, d: S.recOpen ? i : i + 1, q: `${upto - i}セット目はできましたか？`, sub: `「${it.title}」` });
+        }
+      } else if (!recorded(it) && !S.breakFollows) {
+        out.push({ key: 'c:' + it.id, id: it.id, past: false, q: 'この項目はできましたか？', sub: `「${it.title}」` });
+      }
+    }
+    const curPast = out.filter(x => x.past).length;
+    const curIdx = e ? cache.indexOf(e) : (() => { const k = cache.findIndex(x => x.startMins * 60 > S.sec); return k < 0 ? cache.length : k; })();
+    const itemDist = (x) => { const j = cache.indexOf(x); let c = 0; for (let k = j; k < curIdx; k++) if (cache[k] && cache[k].item.kind === 'study') c++; return Math.max(1, c); };   // 休憩を除いた項目の数で、何個前か
+    const others = cache.filter(x => x.isPastPending && x.item.kind === 'study' && !(e && x.item.id === it.id)).sort((a, b) => b.startMins - a.startMins);
+    others.forEach((x) => {
+      const miss = x.target - (x.done || 0) - (x.missed || 0);
+      for (let i = 0; i < miss; i++) {
+        const sub = `「${x.item.title}」 ${hm(x.startMins)}〜${hm(x.endMins)}`;
+        if (x.item.sets > 0) { const num = x.target - i; out.push({ key: 'p:' + x.item.id + ':' + num, id: x.item.id, past: true, d: itemDist(x), q: `${num}セット目はできましたか？`, sub }); }
+        else out.push({ key: 'p:' + x.item.id, id: x.item.id, past: true, d: itemDist(x), q: 'この項目はできましたか？', sub });
+      }
+    });
+    // 2個前よりも前まで未記入がたまっている時は、ここでは記録せず、時間割の最初の未記入へ誘導する
+    out.reverse();   // 左から古い順：いちばん左が2個前、その右が1個前、いちばん右が「いま」
+    const pastN = out.filter(x => x.past).length;
+    out.filter(x => x.past).forEach((x) => { x.tag = (x.d || 1) + '個前の分'; });   // 休憩を除いた項目の数で何個前か
+    const pendItems = new Set(out.filter(x => x.past).map(x => x.id)).size;
+    if (pendItems >= 3) {   // 未記入の項目が3個以上なら、ここでは記録せず時間割へ誘導する
+      const keep = out.filter(x => !x.past);
+      keep.unshift({ key: 'guide:' + pastN, guide: true, past: true, tag: '未記入', q: `未記入の項目が${pendItems}個たまっています`, sub: '時間割の一番古い未記入から順に記録しましょう' });
+      return keep;
+    }
+    return out.slice(0, MAX_SLIDES);
+  }
+
+  function renderSlides() {
+    const sl = g('pm-sl'), dots = g('pm-dots'); if (!sl) return;
+    const ICON_NG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+    const ICON_OK = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="12" cy="12" r="8"/></svg>';
+    const base = 'flex:1;display:flex;align-items:center;justify-content:center;gap:8px;height:54px;border-radius:16px;font-size:15px;font-weight:900;';
+    const btnNg = `<button type="button" data-a="ng" style="${base}border:0;background:#e11d48;color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.2)">${ICON_NG}できなかった</button>`;
+    const btnOk = `<button type="button" data-a="ok" style="${base}border:0;background:#fff;color:#059669;box-shadow:0 4px 12px rgba(0,0,0,.2)">${ICON_OK}できた</button>`;
+    sl.innerHTML = slides.map((s, i) =>
+      `<div data-i="${i}" style="flex:0 0 100%;scroll-snap-align:center;box-sizing:border-box;background:rgba(255,255,255,.12);border-radius:18px;padding:12px">` +
+      `<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:4px"><span style="font-size:11px;font-weight:900;border-radius:999px;padding:2px 10px;background:${s.past ? '#fbbf24' : 'rgba(255,255,255,.3)'};color:${s.past ? '#78350f' : '#fff'}">${s.tag || (s.past ? '前の分' : 'いま')}</span><span style="font-size:15px;font-weight:900">${esc(s.q)}</span></div>` +
+      `<div style="font-size:11px;opacity:.85;text-align:center;margin-bottom:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.sub)}</div>` +
+      (s.guide ? `<div style="display:flex"><button type="button" data-a="go" style="${base}border:0;background:#fbbf24;color:#78350f;height:48px">最初の未記入へ移動</button></div></div>`
+        : `<div style="display:flex;gap:10px">${btnNg}${btnOk}</div></div>`)).join('');
+    sl.scrollLeft = 0;
+    if (slides.length > 1) {
+      dots.innerHTML = slides.map((_, i) => `<i style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#fff;opacity:${i === 0 ? 1 : .4};transition:opacity .2s,transform .2s;transform:scale(${i === 0 ? 1.3 : 1})"></i>`).join('') + `<span style="margin-left:6px;opacity:.9">未記入${slides.length}件 ← 横にスライド →</span>`;
+    } else dots.innerHTML = '';
+  }
+
   function tick() {
     const b = ensure(); if (!b) return;
     let un = false; try { un = !!(window.isUnusedActiveTab && window.isUnusedActiveTab()); } catch (_) {}
@@ -16015,37 +16245,29 @@ window.__structSig = function (list, withTime) {
     g('pm-chip').textContent = S.mode === 'break' ? '休憩' : S.mode === 'study' ? '勉強' : S.mode === 'idle' ? 'いま予定なし' : '予定';
     g('pm-title').textContent = S.it ? S.it.title : '';
     g('pm-set').textContent = S.N ? `${S.n}/${S.N}セット目` : '';
+    const kindPill = g('pm-kind');
+    const isStudy0 = !!(S.it && S.it.kind === 'study');
+    kindPill.textContent = isStudy0 ? (S.it.sets > 0 ? `回数制 ×${S.it.sets}` : 'チェック制') : '';
+    kindPill.style.display = isStudy0 ? '' : 'none';
+    // 昼食・10分休憩など記録できない項目は、残り時間だけ表示（自分の◯×は出さない）。5分休憩も残り時間を表示
     g('pm-time').textContent = S.mode === 'idle' ? '--:--' : fmt(S.remain);
     g('pm-bar').style.width = S.total ? Math.max(0, Math.min(100, (1 - S.remain / S.total) * 100)) + '%' : '0';
-    g('pm-range').textContent = S.e ? `今の項目 ${formatTime(S.e.startMins)}〜${formatTime(S.e.endMins)}` : '';
-    g('pm-next').textContent = S.next ? `次：${S.next.item.title}（${formatTime(S.next.startMins)}〜）` : '';
-    const chk = g('pm-chk');
-    const isStudyItem = !!(S.it && S.it.kind === 'study');
-    const isSetBreak = isStudyItem && S.N > 0 && S.mode === 'break';
-    const isCheckMode = isStudyItem && !(S.N > 0);
-    const show = isSetBreak || isCheckMode;
-    const alreadyRecorded = isStudyItem && (S.N > 0
-      ? ((S.it.done || 0) + (S.it.missed || 0) >= S.N)
-      : (!!S.it.completed || (S.it.missed || 0) > 0));
-    chk.style.display = show ? '' : 'none';
-    if (show) {
-      g('pm-q').textContent = alreadyRecorded ? '記録済みです' : (S.N > 0 ? `${S.n}セット目はできましたか？` : 'この項目はできましたか？');
-      g('pm-ok').parentNode.style.display = alreadyRecorded ? 'none' : 'flex';
-    }
+    g('pm-range').textContent = !S.e ? '' : S.bStart != null ? `${Math.max(1, Math.round((S.bEnd - S.bStart) / 60))}分休憩 ${hm(S.bStart / 60)}〜${hm(S.bEnd / 60)}` : S.it.kind !== 'study' ? `${hm(S.e.startMins)}〜${hm(S.e.endMins)}` : `今の項目 ${hm(S.e.startMins)}〜${hm(S.e.endMins)}`;
+    g('pm-next').textContent = S.next ? `次：${S.next.item.title}（${hm(S.next.startMins)}〜）` : '';
+    slides = buildSlides();
+    const nsig = slides.map(s => s.key).join('|');
+    g('pm-chk').style.display = slides.length ? '' : 'none';
+    if (nsig !== sig) { sig = nsig; renderSlides(); }
   }
   window.__refreshPomodoro = function () { cacheAt = 0; tick(); };
-  function mark(ok) {
-    if (!S || !S.it || S.it.kind !== 'study') return; // 昼食・休憩などは記録対象外
-    const it = S.it;
-    const recorded = it.sets > 0
-      ? ((it.done || 0) + (it.missed || 0) >= it.sets)
-      : (!!it.completed || (it.missed || 0) > 0);
-    if (recorded) return;
+  function mark(s, ok) {
+    const items = (appState.schedules && appState.schedules[appState.activeDay]) || [];
+    const it = items.find(x => x.id === s.id);
+    if (!it || it.kind !== 'study' || recorded(it)) { sig = '__init__'; cacheAt = 0; setTimeout(tick, 100); return; }
     // 項目カードと同じ記録関数を使い、回数制/チェック制・効果音・記録制限を完全に共通化する。
-    try {
-      if (typeof window.__timerRecordStudyItem === 'function') window.__timerRecordStudyItem(it.id, ok);
-    } catch (_) {}
-    cacheAt = 0; setTimeout(tick, 400);
+    window.__pomoRecording = true; setTimeout(() => { window.__pomoRecording = false; }, 2000);   // この間は、時間割の項目への自動移動をしない
+    try { if (typeof window.__timerRecordStudyItem === 'function') window.__timerRecordStudyItem(it.id, ok); } catch (_) {}
+    cacheAt = 0; setTimeout(() => { sig = '__init__'; tick(); }, 450);
   }
   function openCheck() { const c = g('pomo-card'); if (c) { tick(); c.scrollIntoView({ behavior: 'smooth', block: 'center' }); c.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.03)' }, { transform: 'scale(1)' }], { duration: 500 }); } }
   window.openCheckSheet = openCheck;
@@ -16067,7 +16289,8 @@ window.__structSig = function (list, withTime) {
   window.evaluateUnifiedDiagnosis = function () {
     const r = origEval.apply(this, arguments);
     try {
-      if (!r || !r.proposal || !r.proposal.fixSig || window.__manualProposal) return r;
+      if (!window.__autoPopupEval) return r;   // 止めるのは「自動で出す修正案のポップアップ」を作る時だけ。手動の操作・ボタンの状態・通知の判定では止めない
+      if (!r || !r.proposal || !r.proposal.fixSig || window.__manualProposal || (window.__userFixUntil || 0) > Date.now()) return r;   // 自分で修正案ボタンを押した時は、回数に関係なく出す
       const h = load(), clicks = h[keyOf('#clicks')] || 0;
       if ((h[keyOf(r.proposal.fixSig)] || 0) >= MAX || clicks >= MAX_CLICKS) {   // 何度適用しても直らない修正案は出さない
         const t = keyOf('#told'); if (told !== t) { told = t; try { showToast('同じ修正が繰り返されたため、今日はこれ以上の自動の修正案を止めました（「修正案」ボタンからは実行できます）', 'dark'); } catch (_) {} }
@@ -16076,21 +16299,75 @@ window.__structSig = function (list, withTime) {
     } catch (_) {}
     return r;
   };
+  const origPop = window.renderCoachFloatingPopup;   // 自動のポップアップを作っている間だけ、印を付ける
+  if (typeof origPop === 'function') window.renderCoachFloatingPopup = function () { window.__autoPopupEval = true; try { return origPop.apply(this, arguments); } finally { window.__autoPopupEval = false; } };
+  const origShow = window.showProposalNow;   // 修正案ボタン：押すたびに10分間は、同じ修正案でも止めない（止めるのは、自動で出す時だけ）
+  if (typeof origShow === 'function') window.showProposalNow = function () { window.__userFixUntil = Date.now() + 10 * 60000; return origShow.apply(this, arguments); };
   const origRun = window.runAutoFixSequence;
-  if (typeof origRun === 'function') window.runAutoFixSequence = function () {
-    try { const h = load(), k = keyOf('#clicks'); h[k] = (h[k] || 0) + 1; const d = k.slice(0, 10), keep = {}; Object.keys(h).forEach(x => { if (x.slice(0, 10) === d) keep[x] = h[x]; }); save(keep); } catch (_) {}
+  if (typeof origRun === 'function') window.runAutoFixSequence = function (options) {
+    // 手動（「この修正を行う」・修正案ボタンから出した案）は、10分たっていても・何回目でも止めない
+    const byUser = (options && options.userInitiated === true) || !!window.__manualProposal || (window.__userFixUntil || 0) > Date.now();
+    if (byUser) window.__userFixUntil = Date.now() + 10 * 60000;   // 手動で押した流れの実行は、何回でも続けられる（自動の回数にも数えない）
+    else try { const h = load(), k = keyOf('#clicks'); h[k] = (h[k] || 0) + 1; const d = k.slice(0, 10), keep = {}; Object.keys(h).forEach(x => { if (x.slice(0, 10) === d) keep[x] = h[x]; }); save(keep); } catch (_) {}
     return origRun.apply(this, arguments);
   };
   window.runAutoFixSequenceInner = function () {
     try {
       const r = origEval();
       if (r && r.proposal && r.proposal.fixSig) {
+        if ((window.__userFixUntil || 0) > Date.now() || window.__manualProposal) return origInner.apply(this, arguments);
         const h = load(), k = keyOf(r.proposal.fixSig); h[k] = (h[k] || 0) + 1;
         const t = Date.now(), keep = {}; Object.keys(h).forEach(x => { if (x.slice(0, 10) === k.slice(0, 10)) keep[x] = h[x]; });   // 古い日の記録は捨てる
         save(keep);
       }
     } catch (_) {}
     return origInner.apply(this, arguments);
+  };
+})();
+</script>
+
+<script>
+/* 修正案を1回の実行で収束させる：実行後にもう一度診断し、まだ直す所があれば続けて実行する（手動の実行のみ） */
+(function () {
+  const prev = window.runAutoFixSequence;
+  if (typeof prev !== 'function' || typeof window.evaluateUnifiedDiagnosis !== 'function') return;
+  const MAX_EXTRA = 4;
+  const wait = (ms) => new Promise(r => setTimeout(r, ms));
+  const nextDiag = () => {   // 「修正案」ボタンを押した時と同じ条件で、次の案があるか調べる
+    const hk = appState.handledDiagnosisKeys, ap = appState.appliedFixSigs, q = appState.quietSig, mp = window.__manualProposal, fp = window.__forceProposal;
+    appState.handledDiagnosisKeys = {}; appState.appliedFixSigs = {}; appState.quietSig = null;
+    window.__manualProposal = true; window.__forceProposal = true;
+    try { return window.evaluateUnifiedDiagnosis(); }
+    catch (_) { return null; }
+    finally { window.__manualProposal = mp; window.__forceProposal = fp; appState.handledDiagnosisKeys = hk; appState.appliedFixSigs = ap; appState.quietSig = q; }
+  };
+  const sigOf = (d) => { try { return d.proposal.fixSig || JSON.stringify(d.proposal.steps.map(s => [s.type, s.targetId, s.destItemId || ''])); } catch (_) { return String(Math.random()); } };
+  window.runAutoFixSequence = async function (options) {
+    const byUser = (options && options.userInitiated === true) || !!window.__manualProposal;
+    if (!byUser || window.__fixChain || appState.editMode) return prev.apply(this, arguments);   // 自動の実行・編集中は、今まで通り1回だけ
+    window.__fixChain = true;
+    let passes = 1;
+    try {
+      const seen = new Set();
+      try { const d0 = nextDiag(); if (d0 && d0.proposal) seen.add(sigOf(d0)); } catch (_) {}
+      const r = await prev.apply(this, arguments);
+      for (let k = 0; k < MAX_EXTRA; k++) {
+        for (let w = 0; w < 40 && appState.isAnimating; w++) await wait(100);   // 前の実行の仕上げを待つ
+        if (appState.editMode || appState.isAnimating) break;
+        await wait(150);
+        const d = nextDiag();
+        if (!d || !d.proposal || !d.proposal.steps || !d.proposal.steps.length) break;   // もう直す所が無い → 完了
+        const sg = sigOf(d);
+        if (seen.has(sg)) break;   // 同じ案の繰り返し → 堂々巡りなので止める
+        seen.add(sg);
+        passes++;
+        try { showToast(`続けて確認：まだ直す所があるので、もう一度修正します（${passes}回目）`, 'dark'); } catch (_) {}
+        window.__userFixUntil = Date.now() + 10 * 60000;
+        await prev.call(this, { userInitiated: true });
+      }
+      if (passes > 1) { try { showToast(`${passes}回分の修正を続けて実行しました`, 'emerald'); } catch (_) {} }
+      return r;
+    } finally { window.__fixChain = false; }
   };
 })();
 </script>
